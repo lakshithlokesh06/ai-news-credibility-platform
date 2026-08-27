@@ -1,0 +1,52 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Database and generated local state
+*.db
+*.sqlite
+*.sqlite3
+postgres-data/
+
+# Large or generated ML/data artifacts
+data/raw/*
+data/processed/*
+models/artifacts/*
+models/checkpoints/*
+models/trained/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!models/artifacts/.gitkeep
+!models/checkpoints/.gitkeep
+!models/trained/.gitkeep
