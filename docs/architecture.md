@@ -8,12 +8,25 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, and documentation. Prediction, training, model loading, transformer inference, and explainability are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, model registry metadata, versioned artifacts, model comparison, and classical-model inference. Transformer inference, SHAP explainability, LLMs, external fact-checking APIs, web scraping, and prediction history are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
 ```text
 CSV Dataset -> Validation/Mapping -> Canonical Articles -> PostgreSQL -> NLP Preprocessing -> Future Model Training
+```
+
+The current classical ML pipeline is:
+
+```text
+Canonical Articles
+-> Train/Validation/Test Split
+-> Classical NLP Preprocessing
+-> TF-IDF
+-> Logistic Regression / Linear SVM
+-> Validation/Test Evaluation
+-> Versioned Artifact
+-> Classical Inference
 ```
 
 ## Frontend
@@ -22,10 +35,10 @@ The Next.js frontend provides the user-facing shell for the future analysis plat
 
 - Landing page for responsible product positioning
 - Dataset overview page backed by live API data
-- Future article analysis workspace
+- Classical inference workspace for completed baseline models
 - Future prediction history
-- Future model comparison page
-- Future evaluation dashboard
+- Classical model registry and simple baseline training action
+- Evaluation dashboard backed by stored validation/test metrics
 - About page documenting scope and constraints
 
 The frontend communicates with the backend through a configurable API base URL.
@@ -42,7 +55,7 @@ The FastAPI backend is organized by responsibility:
 - `repositories/` contains persistence access patterns
 - `services/` contains business workflow orchestration, CSV ingestion, preprocessing, and statistics
 - `nlp/` will contain future specialized NLP preprocessing and feature extraction components
-- `ml/` will contain model interfaces, classifiers, and evaluation helpers
+- `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, evaluation, artifacts, inference, and comparison helpers
 - `explainability/` will contain SHAP and other explanation workflows
 - `utils/` contains shared implementation utilities
 
@@ -59,6 +72,7 @@ Current persistence tables:
 
 - `news_articles`: canonical imported article records with `REAL`/`FAKE` labels, optional metadata, duplicate keys, and import-run references
 - `dataset_import_runs`: auditable import-run records with status, row counts, duplicate counts, invalid counts, start/completion timestamps, and error summaries
+- `ml_training_runs`: auditable training-run records with model type, status, preprocessing configuration, text composition configuration, TF-IDF configuration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, and failure information
 
 No prediction-history or model-result tables have been introduced yet.
 
@@ -114,15 +128,31 @@ Transformer-safe preprocessing is intentionally minimal. It normalizes Unicode, 
 
 Article text composition is explicit through `title_only`, `content_only`, and `title_and_content` profiles.
 
+## Classical ML Baselines
+
+Classical ML code is modular under `backend/app/ml/`:
+
+- `dataset.py`: builds training samples from canonical articles and validates class balance
+- `splitting.py`: deterministic stratified train/validation/test splitting
+- `features.py`: TF-IDF vectorizer construction
+- `trainers.py`: Logistic Regression and calibrated Linear SVM classifier factories
+- `evaluation.py`: binary classification metrics
+- `artifacts.py`: controlled artifact persistence, checksum validation, and safe loading
+- `training_service.py`: lifecycle orchestration and database updates
+- `inference.py`: model loading and prediction using stored preprocessing/composition configs
+- `comparison.py`: metric-based comparison across completed training runs
+
+The TF-IDF vectorizer is fitted only on training text. Validation and test splits use `transform` on the fitted vectorizer. Validation metrics can inform model selection; test metrics are stored separately and should remain untouched during fitting and selection.
+
+Logistic Regression exposes native `predict_proba`. Linear SVM is wrapped with sigmoid `CalibratedClassifierCV`; the calibration method and CV count are stored so probability outputs are not confused with raw SVM decision scores.
+
+Artifacts live under `models/trained/{training_run_id}/` and contain fitted sklearn objects plus safe metadata. The loader accepts only controlled relative artifact paths and validates expected files, artifact version, and checksum before loading.
+
 ## Future Components
 
 ### NLP Preprocessing
 
 Reusable preprocessing currently lives in `backend/app/services/preprocessing.py`. Future specialized NLP components can be isolated under `backend/app/nlp/` and expose clear service interfaces. Expected responsibilities include tokenization, optional stop-word handling, vectorization support, and dataset transformation.
-
-### Classical ML Baselines
-
-Future baseline models should live under `backend/app/ml/`. They can include logistic regression, Naive Bayes, SVM, and tree-based classifiers. These should share a common interface for training, evaluation, persistence, and inference.
 
 ### Transformer Classification
 
@@ -130,7 +160,7 @@ Transformer-based classifiers should be added behind explicit model interfaces s
 
 ### Confidence Scoring
 
-Confidence scores should be treated as model estimates, not truth guarantees. Future calibration logic can include probability calibration, confidence bands, and uncertainty reporting.
+Confidence scores should be treated as model estimates, not truth guarantees. Current classical inference exposes confidence only when genuine probability estimates are available.
 
 ### SHAP Explainability
 

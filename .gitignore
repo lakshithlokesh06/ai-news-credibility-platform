@@ -45,6 +45,10 @@ data/processed/*
 models/artifacts/*
 models/checkpoints/*
 models/trained/*
+*.joblib
+*.pkl
+*.pickle
+training-tmp/
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !models/artifacts/.gitkeep

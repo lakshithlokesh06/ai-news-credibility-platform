@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     def data_raw_dir(self) -> Path:
         return self.project_root / "data" / "raw"
 
+    @property
+    def trained_models_dir(self) -> Path:
+        return self.project_root / "models" / "trained"
+
 
 @lru_cache
 def get_settings() -> Settings:

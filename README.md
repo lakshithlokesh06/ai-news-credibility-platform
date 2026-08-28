@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform that will eventually support model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, and data APIs. It does not implement fake-news prediction, model training, transformer inference, SHAP explainability, or generated prediction results.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, model artifacts, model comparison, and classical-model inference APIs. It does not implement transformer inference, SHAP explainability, LLMs, external fact-checking APIs, web scraping, or prediction history.
 
 ## Purpose
 
@@ -13,16 +13,16 @@ The future system should provide model-based credibility and misinformation pred
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, and dataset statistics
-- Next.js frontend shell with professional product navigation, placeholder product pages, and a live data overview page
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, and classical ML services
+- Next.js frontend shell with professional product navigation, live data overview, classical model registry, evaluation dashboard, and inference workspace
 - PostgreSQL development database via Docker Compose
-- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, and data APIs
+- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, artifacts, inference, and model comparison
 - Documentation for the planned architecture and roadmap
 
 ## Technology Stack
 
 - Frontend: Next.js, React, TypeScript, Tailwind CSS
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic
+- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, scikit-learn, numpy, joblib
 - Database: PostgreSQL
 - Testing: pytest, FastAPI TestClient
 - Tooling: Docker Compose, ESLint, TypeScript
@@ -113,6 +113,11 @@ The backend exposes:
 - `GET /api/v1/articles`
 - `GET /api/v1/articles/{article_id}`
 - `GET /api/v1/dataset-statistics`
+- `POST /api/v1/ml/training-runs`
+- `GET /api/v1/ml/training-runs`
+- `GET /api/v1/ml/training-runs/{training_run_id}`
+- `POST /api/v1/ml/models/{training_run_id}/predict`
+- `GET /api/v1/ml/model-comparison`
 
 ## Dataset Imports
 
@@ -188,6 +193,50 @@ The backend includes two reusable text paths:
 
 Article text composition is explicit and reproducible with `title_only`, `content_only`, and `title_and_content` modes.
 
+## Classical ML Training
+
+The current training pipeline is:
+
+```text
+Canonical Articles
+-> Train/Validation/Test Split
+-> Classical NLP Preprocessing
+-> TF-IDF
+-> Logistic Regression / Linear SVM
+-> Evaluation
+-> Versioned Artifact
+-> Inference
+```
+
+Training is synchronous for this stage and uses only canonical `news_articles` records. It validates that a real imported dataset exists, both `REAL` and `FAKE` classes are present, each class has enough samples, composed text is non-empty, and stratified splitting can proceed safely.
+
+Default split ratios are 70% training, 15% validation, and 15% test. Splitting is deterministic with a stored random seed and stratified by label. The TF-IDF vectorizer is fitted only on the training split; validation and test data are transformed with that fitted vectorizer to prevent leakage.
+
+Supported models:
+
+- Logistic Regression with `predict_proba`
+- Linear SVM wrapped in sigmoid `CalibratedClassifierCV`, with the calibration method recorded in metadata
+
+Validation metrics and untouched test metrics are stored separately. Metrics include accuracy, precision, recall, F1, ROC-AUC where probabilities are available, confusion matrix, class-level metrics, and support.
+
+## Model Artifacts
+
+Trained artifacts are saved under:
+
+```text
+models/trained/{training_run_id}/
+```
+
+Each artifact directory includes the fitted TF-IDF vectorizer, classifier, preprocessing configuration, text composition configuration, label mapping, training configuration, metadata, and checksum validation. Model binaries are not stored in PostgreSQL and are excluded from Git.
+
+The artifact loader only accepts relative artifact paths inside the controlled `models/trained/` directory and rejects traversal or incomplete artifacts.
+
+## Classical Inference
+
+The inference API uses the exact preprocessing and text-composition configuration stored with the selected completed training run. Responses include predicted label, `REAL` probability, `FAKE` probability, confidence when valid probabilities exist, and the probability method.
+
+Inference responses are model-based classifications from learned dataset patterns. They are not independent verification of factual truth.
+
 ## Frontend
 
 From the `frontend/` directory:
@@ -210,17 +259,16 @@ npm run build
 
 - `/` - landing page
 - `/data` - dataset overview, latest imports, and article browser
-- `/analyze` - future article analysis workspace
+- `/analyze` - classical model inference workspace
 - `/history` - future prediction history
-- `/models` - future model comparison
-- `/evaluation` - future evaluation dashboard
+- `/models` - classical model registry and simple baseline training action
+- `/evaluation` - validation/test metrics and model comparison dashboard
 - `/about` - project information
 
 ## Roadmap
 
-- Dataset import UI actions for server-local CSV files
+- Richer dataset import UI actions for server-local CSV files
 - NLP preprocessing extensions for tokenization, optional stop-word handling, and feature extraction
-- Classical ML baselines such as logistic regression, SVM, and tree-based models
 - Transformer-based credibility and misinformation classification
 - Confidence scoring and calibration
 - SHAP-based explainability for model outputs where appropriate
