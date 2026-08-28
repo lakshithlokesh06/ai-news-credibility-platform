@@ -1,2 +1,6 @@
-"""SQLAlchemy models will be added here when persistence entities are introduced."""
+"""SQLAlchemy model package."""
+
+from app.models.article import ArticleLabel, DatasetImportRun, ImportStatus, NewsArticle
+
+__all__ = ["ArticleLabel", "DatasetImportRun", "ImportStatus", "NewsArticle"]
 

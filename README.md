@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform that will eventually support model-based news credibility and misinformation analysis.
 
-The current implementation intentionally stops at the project foundation. It does not implement fake-news prediction, NLP preprocessing, model training, transformer inference, SHAP explainability, or generated prediction results.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, and data APIs. It does not implement fake-news prediction, model training, transformer inference, SHAP explainability, or generated prediction results.
 
 ## Purpose
 
@@ -13,10 +13,10 @@ The future system should provide model-based credibility and misinformation pred
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, and Alembic
-- Next.js frontend shell with professional product navigation and placeholder pages
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, and dataset statistics
+- Next.js frontend shell with professional product navigation, placeholder product pages, and a live data overview page
 - PostgreSQL development database via Docker Compose
-- Backend tests for startup and health endpoints
+- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, and data APIs
 - Documentation for the planned architecture and roadmap
 
 ## Technology Stack
@@ -107,6 +107,86 @@ The backend exposes:
 
 - `GET /health`
 - `GET /api/v1/health`
+- `GET /api/v1/dataset-imports`
+- `GET /api/v1/dataset-imports/{import_run_id}`
+- `POST /api/v1/dataset-imports`
+- `GET /api/v1/articles`
+- `GET /api/v1/articles/{article_id}`
+- `GET /api/v1/dataset-statistics`
+
+## Dataset Imports
+
+Place CSV datasets in:
+
+```text
+data/raw/
+```
+
+Then trigger an import through the backend API:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/dataset-imports \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset_name": "example-dataset",
+    "filename": "example.csv",
+    "column_mapping": {
+      "title": "headline",
+      "content": "text",
+      "label": "label",
+      "source_name": "source",
+      "publication_date": "date",
+      "source_url": "url"
+    }
+  }'
+```
+
+Only filenames inside `data/raw/` are accepted. Arbitrary filesystem paths are rejected.
+
+Numeric labels require explicit meaning:
+
+```json
+{
+  "dataset_name": "numeric-label-dataset",
+  "filename": "numeric.csv",
+  "label_mapping": {
+    "1": "REAL",
+    "0": "FAKE"
+  }
+}
+```
+
+The importer never infers labels from article content.
+
+## Canonical Article Schema
+
+Imported CSV rows are mapped into canonical `news_articles` records:
+
+- `id`
+- `title`
+- `content`
+- `label`: `REAL` or `FAKE`
+- `source_name`
+- `author`
+- `publication_date`
+- `source_url`
+- `dataset_name`
+- `external_id`
+- `duplicate_key`
+- `import_run_id`
+- `created_at`
+- `updated_at`
+
+Optional fields may be absent in source datasets. A row must include an explicit label and at least a title/headline or content/article text.
+
+## Preprocessing
+
+The backend includes two reusable text paths:
+
+- Classical ML preprocessing: Unicode normalization, HTML removal, whitespace normalization, configurable URL normalization/removal, configurable lowercasing, and conservative punctuation spacing.
+- Transformer-safe preprocessing: minimal Unicode, HTML, and whitespace cleanup while preserving casing, punctuation, sentence structure, and contextual wording.
+
+Article text composition is explicit and reproducible with `title_only`, `content_only`, and `title_and_content` modes.
 
 ## Frontend
 
@@ -129,6 +209,7 @@ npm run build
 ## Frontend Routes
 
 - `/` - landing page
+- `/data` - dataset overview, latest imports, and article browser
 - `/analyze` - future article analysis workspace
 - `/history` - future prediction history
 - `/models` - future model comparison
@@ -137,7 +218,8 @@ npm run build
 
 ## Roadmap
 
-- NLP preprocessing pipeline for cleaning, tokenization, normalization, and feature extraction
+- Dataset import UI actions for server-local CSV files
+- NLP preprocessing extensions for tokenization, optional stop-word handling, and feature extraction
 - Classical ML baselines such as logistic regression, SVM, and tree-based models
 - Transformer-based credibility and misinformation classification
 - Confidence scoring and calibration
@@ -146,4 +228,3 @@ npm run build
 - Evaluation workflow with precision, recall, F1, ROC-AUC, calibration, and confusion matrices
 - Prediction history and audit trail
 - Dataset ingestion, provenance tracking, and experiment metadata
-

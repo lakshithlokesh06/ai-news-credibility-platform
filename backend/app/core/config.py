@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,14 @@ class Settings(BaseSettings):
             if origin.strip()
         ]
 
+    @property
+    def project_root(self) -> Path:
+        return Path(__file__).resolve().parents[3]
+
+    @property
+    def data_raw_dir(self) -> Path:
+        return self.project_root / "data" / "raw"
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -37,4 +46,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-
