@@ -8,7 +8,7 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, and model comparison. SHAP explainability, LLMs, RAG, external fact-checking APIs, web scraping, and prediction history are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, and explicit model explainability. LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, and prediction history are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
@@ -42,13 +42,25 @@ Canonical Articles
 -> Transformer Inference
 ```
 
+The current explanation pipeline is:
+
+```text
+Article
+-> Selected Trained Model
+-> Prediction
+-> Probability / Confidence
+-> SHAP / Feature Attribution
+-> Influential Tokens/Phrases
+-> Human-Readable Explanation
+```
+
 ## Frontend
 
 The Next.js frontend provides the user-facing shell for the future analysis platform:
 
 - Landing page for responsible product positioning
 - Dataset overview page backed by live API data
-- Inference workspace for completed classical and transformer models
+- Inference and explanation workspace for completed classical and transformer models
 - Future prediction history
 - Model registry and training action with model-family awareness
 - Evaluation dashboard backed by stored validation/test metrics across model families
@@ -69,7 +81,7 @@ The FastAPI backend is organized by responsibility:
 - `services/` contains business workflow orchestration, CSV ingestion, preprocessing, and statistics
 - `nlp/` will contain future specialized NLP preprocessing and feature extraction components
 - `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, transformer dataset/tokenization/device/artifact helpers, evaluation, inference, and comparison helpers
-- `explainability/` will contain SHAP and other explanation workflows
+- `explainability/` contains explanation configuration, classical attribution, transformer SHAP attribution, SHAP adapters, token aggregation, normalization, and orchestration services
 - `utils/` contains shared implementation utilities
 
 ## Database
@@ -161,6 +173,26 @@ Logistic Regression exposes native `predict_proba`. Linear SVM is wrapped with s
 
 Artifacts live under `models/trained/{training_run_id}/` and contain fitted sklearn objects plus safe metadata. The loader accepts only controlled relative artifact paths and validates expected files, artifact version, and checksum before loading.
 
+## Explainability
+
+Explainability is separated from training, inference, routing, and persistence under `backend/app/explainability/`:
+
+- `config.py`: structured explanation errors, shared limitations, and label helpers
+- `classical.py`: TF-IDF linear-model feature attribution and optional Logistic Regression SHAP
+- `transformer.py`: bounded SHAP text attribution for fine-tuned DistilBERT artifacts
+- `shap_integration.py`: lazy SHAP imports and adapter helpers
+- `phrase_aggregation.py`: conservative subword token aggregation
+- `normalization.py`: direction-aware ranking and frontend response normalization
+- `service.py`: training-run validation, prediction reuse, family dispatch, and response assembly
+
+The backend exposes `POST /api/v1/ml/models/{training_run_id}/explain`. The endpoint validates that the selected training run exists, completed successfully, and has a controlled artifact path. It runs normal inference first, then computes bounded explanations. Explanation results are not persisted and do not affect training records.
+
+Classical explanations use the exact fitted vectorizer and classifier from the artifact. Logistic Regression defaults to local coefficient-times-TF-IDF contributions, with optional SHAP linear attribution. Linear SVM explanations use the underlying fitted linear estimators inside the calibrated wrapper, so they describe the decision function rather than calibrated probability behavior.
+
+Transformer explanations use the saved fine-tuned model, tokenizer, label mapping, and transformer-safe text composition from the selected run. SHAP text attribution is bounded by maximum sequence length and maximum evaluations. Raw SHAP structures remain internal; API responses expose normalized influential tokens or phrases grouped by direction.
+
+Attribution direction is explicitly mapped to canonical `REAL` and `FAKE` labels. The frontend presents these as influences toward likely credible or likely misinformation. Scores explain model behavior for one input; they are not performance metrics and are not mixed into evaluation dashboards.
+
 ## Transformer Classifier
 
 Transformer support is implemented as a model family alongside the classical baselines:
@@ -192,9 +224,9 @@ Additional transformer classifiers can be added behind the existing model-family
 
 Confidence scores should be treated as model estimates, not truth guarantees. Current classical and transformer inference paths expose confidence only when probability estimates are available.
 
-### SHAP Explainability
+### Additional Explainability
 
-Explainability components should be separated under `backend/app/explainability/`. SHAP support can be added for compatible models with careful performance boundaries and transparent caveats.
+Future explainability work can add richer visualization, cached model-specific explainer reuse, persisted explanation references, or additional methods while keeping the current `/explain` response contract stable.
 
 ### Model Comparison
 

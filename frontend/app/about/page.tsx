@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { Eye, ShieldCheck } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 
@@ -23,13 +23,15 @@ export default function AboutPage() {
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-signal">
               <ShieldCheck aria-hidden="true" className="h-5 w-5" />
             </span>
-            <h2 className="text-xl font-semibold text-ink">Foundation only</h2>
+            <h2 className="text-xl font-semibold text-ink">Current scope</h2>
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            The current application contains routing, layout, configuration,
-            database setup, and test scaffolding. It does not include NLP
-            preprocessing, trained models, model inference, prediction history,
-            or explainability logic.
+            The current application includes dataset ingestion, canonical REAL
+            and FAKE labels, classical and transformer model training,
+            evaluation, artifact-backed inference, model comparison, and local
+            model explanations. It does not perform external fact-checking,
+            claim verification, web search, scraping, RAG, LLM analysis, source
+            reputation scoring, or prediction history.
           </p>
         </section>
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -42,8 +44,28 @@ export default function AboutPage() {
             ))}
           </div>
         </section>
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-signal">
+              <Eye aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <h2 className="text-xl font-semibold text-ink">Explainability</h2>
+          </div>
+          <div className="mt-4 grid gap-4 text-sm leading-6 text-slate-600 md:grid-cols-2">
+            <p>
+              SHAP and feature attribution estimate which words, phrases, or
+              tokens moved a trained model toward its output for one specific
+              article. They are included so users can inspect model behavior
+              instead of treating a prediction as a black box.
+            </p>
+            <p>
+              Attribution is not fact verification. An influential word is not
+              automatically true or false; it reflects how the selected trained
+              artifact responded to patterns learned from its dataset.
+            </p>
+          </div>
+        </section>
       </div>
     </>
   );
 }
-

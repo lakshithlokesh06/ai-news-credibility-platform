@@ -1,2 +1,1 @@
-"""Future explainability components such as SHAP integrations."""
-
+"""Model explainability services and attribution helpers."""

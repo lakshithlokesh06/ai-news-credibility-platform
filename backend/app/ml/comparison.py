@@ -27,6 +27,8 @@ class ModelComparisonService:
                     model_family=ModelFamily(run.model_family),
                     model_type=ClassicalModelType(run.model_type),
                     base_model_name=run.base_model_name,
+                    explainability_supported=run.explainability_supported,
+                    explanation_method=run.explanation_method,
                     status=TrainingRunStatus(run.status),
                     validation_metrics=run.validation_metrics,
                     test_metrics=run.test_metrics,

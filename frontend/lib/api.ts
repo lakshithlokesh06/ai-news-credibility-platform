@@ -66,6 +66,8 @@ export type MLTrainingRun = {
   model_type: SupportedModelType;
   base_model_name: string | null;
   model_display_name: string;
+  explainability_supported: boolean;
+  explanation_method: string | null;
   status: TrainingRunStatus;
   preprocessing_config: Record<string, unknown>;
   text_composition_config: Record<string, unknown>;
@@ -111,6 +113,8 @@ export type ModelComparisonItem = {
   model_family: ModelFamily;
   model_type: SupportedModelType;
   base_model_name: string | null;
+  explainability_supported: boolean;
+  explanation_method: string | null;
   status: TrainingRunStatus;
   validation_metrics: MetricSet | null;
   test_metrics: MetricSet | null;
@@ -136,6 +140,35 @@ export type PredictionResponse = {
   fake_probability: number | null;
   confidence: number | null;
   probability_method: string | null;
+  message: string;
+};
+
+export type InfluentialItem = {
+  text: string;
+  attribution_score: number;
+  attribution_magnitude: number;
+  direction: ArticleLabel;
+  rank: number;
+  start_offset: number | null;
+  end_offset: number | null;
+  source_tokens: string[] | null;
+};
+
+export type ExplanationResponse = {
+  training_run_id: string;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
+  predicted_label: ArticleLabel;
+  real_probability: number | null;
+  fake_probability: number | null;
+  confidence: number | null;
+  probability_method: string | null;
+  explanation_method: string;
+  explained_class: ArticleLabel;
+  influences_toward_real: InfluentialItem[];
+  influences_toward_fake: InfluentialItem[];
+  limitations: string[];
   message: string;
 };
 
@@ -180,4 +213,18 @@ export function formatMetric(value: number | null | undefined) {
     return "N/A";
   }
   return value.toFixed(3);
+}
+
+export function formatExplanationMethod(method: string | null | undefined) {
+  if (!method) {
+    return "Not supported";
+  }
+  const labels: Record<string, string> = {
+    coefficient_tfidf_local: "TF-IDF feature attribution",
+    coefficient_tfidf_local_or_shap: "TF-IDF feature attribution / SHAP",
+    shap_linear_logistic: "SHAP linear attribution",
+    linear_svm_underlying_decision_function: "Linear SVM feature attribution",
+    shap_text: "SHAP text attribution",
+  };
+  return labels[method] ?? method;
 }

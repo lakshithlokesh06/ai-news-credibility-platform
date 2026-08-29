@@ -23,10 +23,16 @@ Transformer artifacts are written with Hugging Face `save_pretrained()` and incl
 
 Generated model binaries are intentionally excluded from git. The backend model registry stores safe metadata in PostgreSQL and loads artifacts only from this controlled directory.
 
+Explainability uses these same controlled artifacts. Classical explanations load `model.joblib` for the fitted TF-IDF vectorizer and classifier. Transformer explanations load the saved `hf_model/` directory for the fine-tuned model and tokenizer. Explanation results are generated on demand and are not written to this directory.
+
 Current model support:
 
 - Logistic Regression with native probabilities
 - Linear SVM with sigmoid calibration via `CalibratedClassifierCV`
 - DistilBERT transformer fine-tuning with default base model `distilbert-base-uncased`
 
-SHAP explainability assets are reserved for a future stage and are not implemented here.
+Current explanation support:
+
+- Logistic Regression: local TF-IDF feature attribution with optional SHAP linear attribution
+- Linear SVM: underlying linear decision-function attribution
+- DistilBERT: bounded SHAP text attribution with conservative subword aggregation

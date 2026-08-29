@@ -55,6 +55,9 @@ pytorch_model*.*
 checkpoint-*/
 training-output/
 training-tmp/
+shap-cache/
+explanations/
+*.shap
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !models/artifacts/.gitkeep

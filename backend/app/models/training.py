@@ -68,8 +68,33 @@ class MLTrainingRun(Base):
         Index("ix_ml_training_runs_model_status", "model_type", "status"),
     )
 
+    @property
+    def explanation_method(self) -> str | None:
+        try:
+            return explanation_method_for_type(ClassicalModelType(self.model_type))
+        except ValueError:
+            return None
+
+    @property
+    def explainability_supported(self) -> bool:
+        return (
+            self.status == TrainingRunStatus.COMPLETED.value
+            and bool(self.artifact_path)
+            and self.explanation_method is not None
+        )
+
 
 def model_family_for_type(model_type: ClassicalModelType) -> ModelFamily:
     if model_type == ClassicalModelType.DISTILBERT:
         return ModelFamily.TRANSFORMER
     return ModelFamily.CLASSICAL
+
+
+def explanation_method_for_type(model_type: ClassicalModelType) -> str | None:
+    if model_type == ClassicalModelType.LOGISTIC_REGRESSION:
+        return "coefficient_tfidf_local_or_shap"
+    if model_type == ClassicalModelType.LINEAR_SVM:
+        return "linear_svm_underlying_decision_function"
+    if model_type == ClassicalModelType.DISTILBERT:
+        return "shap_text"
+    return None

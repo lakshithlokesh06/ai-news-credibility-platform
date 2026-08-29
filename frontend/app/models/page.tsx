@@ -7,6 +7,7 @@ import {
   MLTrainingRun,
   PaginatedResponse,
   fetchFromApi,
+  formatExplanationMethod,
   formatModelFamily,
   formatMetric,
   formatModelType,
@@ -31,7 +32,7 @@ export default async function ModelsPage() {
       <PageHeader
         eyebrow="Model comparison"
         title="Models"
-        description="A backend-driven registry for classical baseline training runs, artifact availability, and validation/test metrics."
+        description="A backend-driven registry for classical and transformer training runs, artifact availability, explainability support, and validation/test metrics."
       />
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-6">
@@ -48,7 +49,7 @@ export default async function ModelsPage() {
                   <Boxes aria-hidden="true" className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className="text-lg font-semibold text-ink">Classical model registry</h2>
+                  <h2 className="text-lg font-semibold text-ink">Model registry</h2>
                   <p className="text-sm text-slate-500">Real training-run metadata from the backend.</p>
                 </div>
               </div>
@@ -59,6 +60,7 @@ export default async function ModelsPage() {
                       <th className="px-3 py-3 font-semibold">Model</th>
                       <th className="px-3 py-3 font-semibold">Family</th>
                       <th className="px-3 py-3 font-semibold">Status</th>
+                      <th className="px-3 py-3 font-semibold">Explainability</th>
                       <th className="px-3 py-3 font-semibold">Dataset size</th>
                       <th className="px-3 py-3 font-semibold">Text mode</th>
                       <th className="px-3 py-3 font-semibold">Validation F1</th>
@@ -78,6 +80,10 @@ export default async function ModelsPage() {
                         </td>
                         <td className="px-3 py-4 text-slate-700">{formatModelFamily(model.model_family)}</td>
                         <td className="px-3 py-4 text-slate-700">{model.status}</td>
+                        <td className="px-3 py-4 text-slate-700">
+                          <p>{model.explainability_supported ? "Supported" : "Not supported"}</p>
+                          <p className="text-xs text-slate-500">{formatExplanationMethod(model.explanation_method)}</p>
+                        </td>
                         <td className="px-3 py-4 text-slate-700">{model.dataset_article_count}</td>
                         <td className="px-3 py-4 text-slate-700">
                           {String(model.text_composition_config.mode ?? "N/A")}

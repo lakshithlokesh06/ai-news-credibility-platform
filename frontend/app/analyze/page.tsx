@@ -25,7 +25,7 @@ export default async function AnalyzePage() {
       <PageHeader
         eyebrow="Analysis workspace"
         title="Article and headline analysis"
-        description="Run inference with completed classical baseline models. Outputs are statistical model predictions, not independent fact verification."
+        description="Run inference with completed classical or transformer models, then request a bounded explanation of the model behavior. Outputs are statistical model predictions, not independent fact verification."
       />
       {models === null ? (
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -40,7 +40,7 @@ export default async function AnalyzePage() {
           <EmptyState
             icon={BrainCircuit}
             title="No completed models available"
-            description="Import a labeled dataset and train a classical baseline before running model-based inference."
+            description="Import a labeled dataset and train a model before running model-based inference and explanations."
           />
         </div>
       )}

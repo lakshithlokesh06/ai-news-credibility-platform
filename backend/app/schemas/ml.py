@@ -99,6 +99,8 @@ class MLTrainingRunResponse(BaseModel):
     model_type: ClassicalModelType
     base_model_name: str | None
     model_display_name: str
+    explainability_supported: bool
+    explanation_method: str | None
     status: TrainingRunStatus
     preprocessing_config: dict
     text_composition_config: dict
@@ -139,6 +141,19 @@ class PredictionRequest(BaseModel):
     content: str | None = None
 
 
+class ExplanationConfig(BaseModel):
+    max_items: int = Field(default=8, ge=1, le=25)
+    method: str = Field(default="auto", pattern="^(auto|coefficient|shap)$")
+    max_transformer_length: int = Field(default=128, ge=16, le=256)
+    max_evaluations: int = Field(default=16, ge=2, le=64)
+    include_real_support: bool = True
+    include_fake_support: bool = True
+
+
+class ExplanationRequest(PredictionRequest):
+    explanation: ExplanationConfig = Field(default_factory=ExplanationConfig)
+
+
 class PredictionResponse(BaseModel):
     training_run_id: UUID
     model_family: ModelFamily
@@ -152,12 +167,43 @@ class PredictionResponse(BaseModel):
     message: str
 
 
+class InfluentialItem(BaseModel):
+    text: str
+    attribution_score: float
+    attribution_magnitude: float
+    direction: ArticleLabel
+    rank: int
+    start_offset: int | None = None
+    end_offset: int | None = None
+    source_tokens: list[str] | None = None
+
+
+class ExplanationResponse(BaseModel):
+    training_run_id: UUID
+    model_family: ModelFamily
+    model_type: ClassicalModelType
+    model_name: str | None
+    predicted_label: ArticleLabel
+    real_probability: float | None
+    fake_probability: float | None
+    confidence: float | None
+    probability_method: str | None
+    explanation_method: str
+    explained_class: ArticleLabel
+    influences_toward_real: list[InfluentialItem]
+    influences_toward_fake: list[InfluentialItem]
+    limitations: list[str]
+    message: str
+
+
 class ModelComparisonItem(BaseModel):
     training_run_id: UUID
     model_display_name: str
     model_family: ModelFamily
     model_type: ClassicalModelType
     base_model_name: str | None
+    explainability_supported: bool
+    explanation_method: str | None
     status: TrainingRunStatus
     validation_metrics: dict | None
     test_metrics: dict | None

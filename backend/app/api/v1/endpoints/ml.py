@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.explainability.config import ExplanationError
+from app.explainability.service import ExplanationService
 from app.ml.comparison import ModelComparisonService
 from app.ml.inference import InferenceError, InferenceService
 from app.ml.training_service import TrainingService
@@ -13,6 +15,8 @@ from app.schemas.ml import (
     MLTrainingRunResponse,
     ModelComparisonResponse,
     PaginatedTrainingRunsResponse,
+    ExplanationRequest,
+    ExplanationResponse,
     PredictionRequest,
     PredictionResponse,
     TrainingRunCreate,
@@ -89,6 +93,26 @@ async def predict_with_model(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
+@router.post("/models/{training_run_id}/explain", response_model=ExplanationResponse)
+async def explain_model_prediction(
+    training_run_id: UUID,
+    request: ExplanationRequest,
+    http_request: Request,
+    db: Session = Depends(get_db),
+) -> ExplanationResponse:
+    service = ExplanationService(
+        db,
+        artifact_base_dir=getattr(http_request.app.state, "artifact_base_dir", None),
+    )
+    try:
+        return service.explain(training_run_id, request)
+    except ExplanationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": str(exc), "error_type": exc.error_type},
+        ) from exc
+
+
 @router.get("/model-comparison", response_model=ModelComparisonResponse)
 async def compare_models(
     metric_source: str = Query(default="test", pattern="^(validation|test)$"),
@@ -97,4 +121,3 @@ async def compare_models(
 ) -> ModelComparisonResponse:
     service = ModelComparisonService(db)
     return service.compare(metric_source=metric_source, primary_metric=primary_metric)
-

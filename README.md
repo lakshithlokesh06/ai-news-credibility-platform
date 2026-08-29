@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, and model inference APIs. It does not implement SHAP explainability, LLMs, external fact-checking APIs, web scraping, RAG, or prediction history.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, model inference APIs, and explicit explainability APIs. It does not implement LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, or prediction history.
 
 ## Purpose
 
@@ -22,7 +22,7 @@ The system should provide model-based credibility and misinformation predictions
 ## Technology Stack
 
 - Frontend: Next.js, React, TypeScript, Tailwind CSS
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, scikit-learn, numpy, joblib, PyTorch, Hugging Face Transformers
+- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, scikit-learn, numpy, joblib, SHAP, PyTorch, Hugging Face Transformers
 - Database: PostgreSQL
 - Testing: pytest, FastAPI TestClient
 - Tooling: Docker Compose, ESLint, TypeScript
@@ -117,6 +117,7 @@ The backend exposes:
 - `GET /api/v1/ml/training-runs`
 - `GET /api/v1/ml/training-runs/{training_run_id}`
 - `POST /api/v1/ml/models/{training_run_id}/predict`
+- `POST /api/v1/ml/models/{training_run_id}/explain`
 - `GET /api/v1/ml/model-comparison`
 
 ## Dataset Imports
@@ -237,6 +238,42 @@ The inference API uses the exact preprocessing and text-composition configuratio
 
 Inference responses are model-based classifications from learned dataset patterns. They are not independent verification of factual truth.
 
+## Explainability
+
+The explanation flow is:
+
+```text
+Article
+-> Selected Trained Model
+-> Prediction
+-> Probability / Confidence
+-> SHAP / Feature Attribution
+-> Influential Tokens/Phrases
+-> Human-Readable Explanation
+```
+
+Explanations are available only through the dedicated `POST /api/v1/ml/models/{training_run_id}/explain` endpoint. Standard prediction does not run SHAP or attribution logic.
+
+Explanation requests support bounded configuration for `max_items`, `method`, `max_transformer_length`, `max_evaluations`, and whether to include `REAL` or `FAKE` supporting evidence. The API returns normalized, frontend-friendly influential items with text, attribution score, supported class direction, rank, and offsets when they can be reconstructed reliably.
+
+Classical strategy:
+
+```text
+TF-IDF -> Linear Model -> Feature Attribution / SHAP
+```
+
+For Logistic Regression, the default explanation uses the fitted TF-IDF vectorizer and classifier coefficients to compute local feature contributions for the exact input. Optional SHAP linear attribution is available for Logistic Regression. For calibrated Linear SVM, attributions refer to the underlying fitted linear decision function; sigmoid calibration affects probabilities, not which text features the SVM learned.
+
+Transformer strategy:
+
+```text
+Tokenizer -> Fine-Tuned DistilBERT -> SHAP Text Attribution
+```
+
+Transformer explanations load the saved fine-tuned artifact and tokenizer for the selected completed training run. They use transformer-safe text composition, bounded SHAP text attribution, and conservative subword aggregation so fragments such as wordpieces can be displayed as readable tokens where safe.
+
+SHAP and feature attribution explain model behavior; they do not verify factual claims. Influential words are not automatically false or true, and attribution reflects how the trained model responded to patterns learned from its dataset.
+
 ## Transformer Training
 
 The transformer training pipeline is:
@@ -303,7 +340,7 @@ npm run build
 
 - `/` - landing page
 - `/data` - dataset overview, latest imports, and article browser
-- `/analyze` - model inference workspace for completed classical and transformer runs
+- `/analyze` - model inference and explicit explanation workspace for completed classical and transformer runs
 - `/history` - future prediction history
 - `/models` - model registry and training action with model-family awareness
 - `/evaluation` - validation/test metrics and model comparison dashboard across model families
@@ -315,6 +352,6 @@ npm run build
 - NLP preprocessing extensions for tokenization, optional stop-word handling, and feature extraction
 - Additional transformer model options and tuning controls
 - Additional confidence scoring and calibration workflows
-- SHAP-based explainability for model outputs where appropriate
+- Richer explanation views and future persisted explanation references
 - Prediction history and audit trail
 - Dataset provenance and richer experiment metadata
