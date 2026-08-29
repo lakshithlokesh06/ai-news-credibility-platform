@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   ModelComparison,
   fetchFromApi,
+  formatModelFamily,
   formatMetric,
   formatModelType,
 } from "@/lib/api";
@@ -56,7 +57,10 @@ export default async function EvaluationPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <h3 className="font-semibold text-ink">{item.model_display_name}</h3>
-                        <p className="mt-1 text-sm text-slate-500">{formatModelType(item.model_type)}</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {formatModelFamily(item.model_family)} /{" "}
+                          {item.base_model_name ?? formatModelType(item.model_type)}
+                        </p>
                       </div>
                       {comparison?.recommended_training_run_id === item.training_run_id ? (
                         <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-signal">

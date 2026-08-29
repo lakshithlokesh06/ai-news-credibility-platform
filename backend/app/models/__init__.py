@@ -1,7 +1,7 @@
 """SQLAlchemy model package."""
 
 from app.models.article import ArticleLabel, DatasetImportRun, ImportStatus, NewsArticle
-from app.models.training import ClassicalModelType, MLTrainingRun, TrainingRunStatus
+from app.models.training import ClassicalModelType, MLTrainingRun, ModelFamily, TrainingRunStatus
 
 __all__ = [
     "ArticleLabel",
@@ -9,6 +9,7 @@ __all__ = [
     "DatasetImportRun",
     "ImportStatus",
     "MLTrainingRun",
+    "ModelFamily",
     "NewsArticle",
     "TrainingRunStatus",
 ]

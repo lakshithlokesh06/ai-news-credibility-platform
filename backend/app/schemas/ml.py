@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.article import ArticleLabel
-from app.models.training import ClassicalModelType, TrainingRunStatus
+from app.models.training import ClassicalModelType, ModelFamily, TrainingRunStatus
 from app.schemas.preprocessing import PreprocessingConfig, TextCompositionConfig
 
 
@@ -48,6 +48,17 @@ class ModelHyperparameters(BaseModel):
     calibration_cv: int = Field(default=3, ge=2, le=5)
 
 
+class TransformerConfig(BaseModel):
+    model_name: str = Field(default="distilbert-base-uncased", min_length=1, max_length=255)
+    max_sequence_length: int = Field(default=192, ge=32, le=512)
+    batch_size: int = Field(default=4, ge=1, le=32)
+    learning_rate: float = Field(default=2e-5, gt=0, le=1e-3)
+    epochs: float = Field(default=1.0, gt=0, le=10)
+    weight_decay: float = Field(default=0.01, ge=0, le=1)
+    evaluation_strategy: str = Field(default="epoch", pattern="^(no|epoch)$")
+    device_preference: str = Field(default="auto", pattern="^(auto|mps|cuda|cpu)$")
+
+
 class TrainingRunCreate(BaseModel):
     model_type: ClassicalModelType
     model_display_name: str | None = Field(default=None, max_length=255)
@@ -55,9 +66,18 @@ class TrainingRunCreate(BaseModel):
     text_composition: TextCompositionConfig = Field(default_factory=TextCompositionConfig)
     preprocessing: PreprocessingConfig = Field(default_factory=PreprocessingConfig)
     tfidf: TfidfConfig = Field(default_factory=TfidfConfig)
+    transformer: TransformerConfig = Field(default_factory=TransformerConfig)
     split: SplitConfig = Field(default_factory=SplitConfig)
     hyperparameters: ModelHyperparameters = Field(default_factory=ModelHyperparameters)
     random_seed: int = Field(default=42, ge=0, le=2_147_483_647)
+
+    @property
+    def model_family(self) -> ModelFamily:
+        return (
+            ModelFamily.TRANSFORMER
+            if self.model_type == ClassicalModelType.DISTILBERT
+            else ModelFamily.CLASSICAL
+        )
 
 
 class MetricSet(BaseModel):
@@ -75,12 +95,15 @@ class MLTrainingRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    model_family: ModelFamily
     model_type: ClassicalModelType
+    base_model_name: str | None
     model_display_name: str
     status: TrainingRunStatus
     preprocessing_config: dict
     text_composition_config: dict
     tfidf_config: dict
+    transformer_config: dict
     model_hyperparameters: dict
     split_config: dict
     random_seed: int
@@ -96,6 +119,8 @@ class MLTrainingRunResponse(BaseModel):
     artifact_checksum: str | None
     artifact_version: str | None
     probability_method: str | None
+    device_used: str | None
+    training_duration_seconds: float | None
     error_summary: str | None
     started_at: datetime
     completed_at: datetime | None
@@ -116,7 +141,9 @@ class PredictionRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     training_run_id: UUID
+    model_family: ModelFamily
     model_type: ClassicalModelType
+    model_name: str | None
     predicted_label: ArticleLabel
     real_probability: float | None
     fake_probability: float | None
@@ -128,7 +155,9 @@ class PredictionResponse(BaseModel):
 class ModelComparisonItem(BaseModel):
     training_run_id: UUID
     model_display_name: str
+    model_family: ModelFamily
     model_type: ClassicalModelType
+    base_model_name: str | None
     status: TrainingRunStatus
     validation_metrics: dict | None
     test_metrics: dict | None
@@ -142,4 +171,3 @@ class ModelComparisonResponse(BaseModel):
     items: list[ModelComparisonItem]
     recommended_training_run_id: UUID | None
     recommendation_note: str | None
-

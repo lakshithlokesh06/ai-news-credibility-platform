@@ -8,6 +8,7 @@ import {
   PredictionResponse,
   apiBaseUrl,
   formatMetric,
+  formatModelFamily,
   formatModelType,
 } from "@/lib/api";
 
@@ -117,7 +118,8 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
         <h2 className="text-lg font-semibold text-ink">Inference result</h2>
         {selectedModelRecord ? (
           <p className="mt-3 text-sm text-slate-500">
-            Selected: {formatModelType(selectedModelRecord.model_type)}
+            Selected: {formatModelFamily(selectedModelRecord.model_family)} /{" "}
+            {selectedModelRecord.base_model_name ?? formatModelType(selectedModelRecord.model_type)}
           </p>
         ) : null}
         {error ? (
@@ -129,6 +131,8 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
             <p>REAL probability: {formatMetric(prediction.real_probability)}</p>
             <p>FAKE probability: {formatMetric(prediction.fake_probability)}</p>
             <p>Confidence: {formatMetric(prediction.confidence)}</p>
+            <p>Model family: {formatModelFamily(prediction.model_family)}</p>
+            <p>Model name: {prediction.model_name ?? formatModelType(prediction.model_type)}</p>
             <p>Probability method: {prediction.probability_method ?? "Not available"}</p>
             <p className="rounded-md bg-slate-50 px-4 py-3 leading-6">{prediction.message}</p>
           </div>
@@ -141,4 +145,3 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
     </div>
   );
 }
-

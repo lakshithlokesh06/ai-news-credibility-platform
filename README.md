@@ -1,28 +1,28 @@
 # AI News Credibility and Misinformation Detection Platform
 
-Production-ready foundation for a full-stack AI/data-science platform that will eventually support model-based news credibility and misinformation analysis.
+Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, model artifacts, model comparison, and classical-model inference APIs. It does not implement transformer inference, SHAP explainability, LLMs, external fact-checking APIs, web scraping, or prediction history.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, and model inference APIs. It does not implement SHAP explainability, LLMs, external fact-checking APIs, web scraping, RAG, or prediction history.
 
 ## Purpose
 
 This project is designed to grow into a platform that can analyze news headlines or articles using NLP, classical machine-learning baselines, transformer classifiers, confidence scoring, explainability, model comparison, and evaluation dashboards.
 
-The future system should provide model-based credibility and misinformation predictions based on learned textual patterns. It should not claim to independently prove whether a story is objectively true or false.
+The system should provide model-based credibility and misinformation predictions based on learned textual patterns. It should not claim to independently prove whether a story is objectively true or false.
 
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, and classical ML services
-- Next.js frontend shell with professional product navigation, live data overview, classical model registry, evaluation dashboard, and inference workspace
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, and transformer services
+- Next.js frontend shell with professional product navigation, live data overview, model registry, evaluation dashboard, and inference workspace
 - PostgreSQL development database via Docker Compose
-- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, artifacts, inference, and model comparison
-- Documentation for the planned architecture and roadmap
+- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, and model comparison
+- Documentation for the current architecture and roadmap
 
 ## Technology Stack
 
 - Frontend: Next.js, React, TypeScript, Tailwind CSS
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, scikit-learn, numpy, joblib
+- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, scikit-learn, numpy, joblib, PyTorch, Hugging Face Transformers
 - Database: PostgreSQL
 - Testing: pytest, FastAPI TestClient
 - Tooling: Docker Compose, ESLint, TypeScript
@@ -237,6 +237,50 @@ The inference API uses the exact preprocessing and text-composition configuratio
 
 Inference responses are model-based classifications from learned dataset patterns. They are not independent verification of factual truth.
 
+## Transformer Training
+
+The transformer training pipeline is:
+
+```text
+Canonical News Articles
+-> Transformer-Safe Text
+-> Stratified Split
+-> Hugging Face Tokenizer
+-> DistilBERT
+-> Fine-Tuning
+-> Validation
+-> Final Test Evaluation
+-> Versioned Hugging Face Artifact
+-> Inference
+```
+
+The default transformer model is `distilbert-base-uncased` with explicit binary labels:
+
+```text
+REAL -> 0
+FAKE -> 1
+```
+
+Transformer support is integrated through the existing training and prediction APIs. Use `model_type: "distilbert"` with `POST /api/v1/ml/training-runs` to create a transformer training run. Optional transformer configuration includes `model_name`, `max_sequence_length`, `batch_size`, `learning_rate`, `epochs`, `weight_decay`, `evaluation_strategy`, and `device_preference`.
+
+PyTorch and Hugging Face Transformers are imported lazily by the transformer training and inference services. FastAPI startup does not download a model or load transformer weights. Real transformer training will download the configured Hugging Face model unless it is already available in the local cache.
+
+Device selection supports `auto`, `mps`, `cuda`, and `cpu`. CPU training is expected to be slow, and small numeric differences can occur across devices.
+
+Transformer probabilities are derived from the softmax of final logits. `confidence` is the selected class probability. These scores remain model estimates, not proof of factual truth.
+
+Classical and transformer model families intentionally coexist. Classical models are fast, transparent baselines with lightweight artifacts; transformers can learn richer contextual patterns at higher compute and artifact cost.
+
+## Transformer Artifacts
+
+Transformer artifacts are saved under:
+
+```text
+models/trained/{training_run_id}/hf_model/
+```
+
+Each transformer run stores Hugging Face `save_pretrained()` output plus safe metadata, label mappings, evaluation summaries, and checksum validation. Large model binaries are excluded from Git.
+
 ## Frontend
 
 From the `frontend/` directory:
@@ -259,20 +303,18 @@ npm run build
 
 - `/` - landing page
 - `/data` - dataset overview, latest imports, and article browser
-- `/analyze` - classical model inference workspace
+- `/analyze` - model inference workspace for completed classical and transformer runs
 - `/history` - future prediction history
-- `/models` - classical model registry and simple baseline training action
-- `/evaluation` - validation/test metrics and model comparison dashboard
+- `/models` - model registry and training action with model-family awareness
+- `/evaluation` - validation/test metrics and model comparison dashboard across model families
 - `/about` - project information
 
 ## Roadmap
 
 - Richer dataset import UI actions for server-local CSV files
 - NLP preprocessing extensions for tokenization, optional stop-word handling, and feature extraction
-- Transformer-based credibility and misinformation classification
-- Confidence scoring and calibration
+- Additional transformer model options and tuning controls
+- Additional confidence scoring and calibration workflows
 - SHAP-based explainability for model outputs where appropriate
-- Model comparison dashboard
-- Evaluation workflow with precision, recall, F1, ROC-AUC, calibration, and confusion matrices
 - Prediction history and audit trail
-- Dataset ingestion, provenance tracking, and experiment metadata
+- Dataset provenance and richer experiment metadata

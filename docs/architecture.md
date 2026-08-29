@@ -8,12 +8,12 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, model registry metadata, versioned artifacts, model comparison, and classical-model inference. Transformer inference, SHAP explainability, LLMs, external fact-checking APIs, web scraping, and prediction history are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, and model comparison. SHAP explainability, LLMs, RAG, external fact-checking APIs, web scraping, and prediction history are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
 ```text
-CSV Dataset -> Validation/Mapping -> Canonical Articles -> PostgreSQL -> NLP Preprocessing -> Future Model Training
+CSV Dataset -> Validation/Mapping -> Canonical Articles -> PostgreSQL -> NLP Preprocessing -> Model Training
 ```
 
 The current classical ML pipeline is:
@@ -29,16 +29,29 @@ Canonical Articles
 -> Classical Inference
 ```
 
+The current transformer pipeline is:
+
+```text
+Canonical Articles
+-> Transformer-Safe Text Composition
+-> Train/Validation/Test Split
+-> Hugging Face Tokenizer
+-> DistilBERT Fine-Tuning
+-> Validation/Test Evaluation
+-> Versioned Hugging Face Artifact
+-> Transformer Inference
+```
+
 ## Frontend
 
 The Next.js frontend provides the user-facing shell for the future analysis platform:
 
 - Landing page for responsible product positioning
 - Dataset overview page backed by live API data
-- Classical inference workspace for completed baseline models
+- Inference workspace for completed classical and transformer models
 - Future prediction history
-- Classical model registry and simple baseline training action
-- Evaluation dashboard backed by stored validation/test metrics
+- Model registry and training action with model-family awareness
+- Evaluation dashboard backed by stored validation/test metrics across model families
 - About page documenting scope and constraints
 
 The frontend communicates with the backend through a configurable API base URL.
@@ -55,7 +68,7 @@ The FastAPI backend is organized by responsibility:
 - `repositories/` contains persistence access patterns
 - `services/` contains business workflow orchestration, CSV ingestion, preprocessing, and statistics
 - `nlp/` will contain future specialized NLP preprocessing and feature extraction components
-- `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, evaluation, artifacts, inference, and comparison helpers
+- `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, transformer dataset/tokenization/device/artifact helpers, evaluation, inference, and comparison helpers
 - `explainability/` will contain SHAP and other explanation workflows
 - `utils/` contains shared implementation utilities
 
@@ -72,7 +85,7 @@ Current persistence tables:
 
 - `news_articles`: canonical imported article records with `REAL`/`FAKE` labels, optional metadata, duplicate keys, and import-run references
 - `dataset_import_runs`: auditable import-run records with status, row counts, duplicate counts, invalid counts, start/completion timestamps, and error summaries
-- `ml_training_runs`: auditable training-run records with model type, status, preprocessing configuration, text composition configuration, TF-IDF configuration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, and failure information
+- `ml_training_runs`: auditable training-run records with model type, model family, base model name, status, preprocessing configuration, text composition configuration, TF-IDF configuration, transformer configuration, selected device, training duration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, and failure information
 
 No prediction-history or model-result tables have been introduced yet.
 
@@ -148,19 +161,36 @@ Logistic Regression exposes native `predict_proba`. Linear SVM is wrapped with s
 
 Artifacts live under `models/trained/{training_run_id}/` and contain fitted sklearn objects plus safe metadata. The loader accepts only controlled relative artifact paths and validates expected files, artifact version, and checksum before loading.
 
+## Transformer Classifier
+
+Transformer support is implemented as a model family alongside the classical baselines:
+
+- `transformer_dataset.py`: builds canonical text samples, keeps explicit `REAL`/`FAKE` label mappings, and tokenizes after splitting
+- `transformer_device.py`: selects `mps`, `cuda`, or `cpu` from an explicit preference
+- `transformer_probabilities.py`: converts logits to stable softmax probabilities and confidence values
+- `transformer_training.py`: lazily imports PyTorch and Hugging Face Transformers, fine-tunes DistilBERT, evaluates validation/test splits, and updates training-run metadata
+- `transformer_artifacts.py`: saves and loads Hugging Face `save_pretrained()` artifacts with controlled paths and checksum metadata
+- `transformer_inference.py`: loads completed transformer artifacts locally and returns predictions through the shared API schema
+
+The default base model is `distilbert-base-uncased`, exposed through `model_type: "distilbert"`. Transformer training and inference use transformer-safe preprocessing, preserving casing, punctuation, sentence structure, and contextual wording after Unicode, HTML, and whitespace cleanup.
+
+PyTorch and Hugging Face libraries are imported only inside transformer training/inference paths. Application startup should not download a model or load transformer weights.
+
+Transformer probabilities are derived from the softmax of model logits. Confidence is the selected class probability. These values are model estimates learned from the imported dataset and should be interpreted with dataset bias, distribution shift, satire, opinion, and source coverage limitations in mind. The classifier is not an external fact-checker.
+
 ## Future Components
 
 ### NLP Preprocessing
 
 Reusable preprocessing currently lives in `backend/app/services/preprocessing.py`. Future specialized NLP components can be isolated under `backend/app/nlp/` and expose clear service interfaces. Expected responsibilities include tokenization, optional stop-word handling, vectorization support, and dataset transformation.
 
-### Transformer Classification
+### Additional Transformer Classification
 
-Transformer-based classifiers should be added behind explicit model interfaces so they can be swapped, evaluated, and compared without changing API routes or persistence logic.
+Additional transformer classifiers can be added behind the existing model-family interfaces so they can be swapped, evaluated, and compared without changing API routes or persistence logic.
 
 ### Confidence Scoring
 
-Confidence scores should be treated as model estimates, not truth guarantees. Current classical inference exposes confidence only when genuine probability estimates are available.
+Confidence scores should be treated as model estimates, not truth guarantees. Current classical and transformer inference paths expose confidence only when probability estimates are available.
 
 ### SHAP Explainability
 
@@ -168,7 +198,7 @@ Explainability components should be separated under `backend/app/explainability/
 
 ### Model Comparison
 
-The model comparison workflow should compare metrics across models, datasets, and evaluation runs. API contracts should avoid hard-coding one model family.
+The model comparison workflow compares metrics across models, datasets, evaluation runs, and model families. API contracts avoid hard-coding one model family.
 
 ### Evaluation
 

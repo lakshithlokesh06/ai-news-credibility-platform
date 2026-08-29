@@ -7,6 +7,7 @@ import {
   MLTrainingRun,
   PaginatedResponse,
   fetchFromApi,
+  formatModelFamily,
   formatMetric,
   formatModelType,
 } from "@/lib/api";
@@ -56,6 +57,7 @@ export default async function ModelsPage() {
                   <thead>
                     <tr className="text-xs uppercase tracking-wide text-slate-500">
                       <th className="px-3 py-3 font-semibold">Model</th>
+                      <th className="px-3 py-3 font-semibold">Family</th>
                       <th className="px-3 py-3 font-semibold">Status</th>
                       <th className="px-3 py-3 font-semibold">Dataset size</th>
                       <th className="px-3 py-3 font-semibold">Text mode</th>
@@ -70,8 +72,11 @@ export default async function ModelsPage() {
                       <tr key={model.id}>
                         <td className="px-3 py-4">
                           <p className="font-medium text-ink">{model.model_display_name}</p>
-                          <p className="text-xs text-slate-500">{formatModelType(model.model_type)}</p>
+                          <p className="text-xs text-slate-500">
+                            {model.base_model_name ?? formatModelType(model.model_type)}
+                          </p>
                         </td>
+                        <td className="px-3 py-4 text-slate-700">{formatModelFamily(model.model_family)}</td>
                         <td className="px-3 py-4 text-slate-700">{model.status}</td>
                         <td className="px-3 py-4 text-slate-700">{model.dataset_article_count}</td>
                         <td className="px-3 py-4 text-slate-700">

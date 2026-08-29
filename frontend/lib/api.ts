@@ -56,16 +56,21 @@ export type NewsArticle = {
 };
 
 export type ClassicalModelType = "logistic_regression" | "linear_svm";
+export type SupportedModelType = ClassicalModelType | "distilbert";
+export type ModelFamily = "classical" | "transformer";
 export type TrainingRunStatus = "pending" | "training" | "completed" | "failed";
 
 export type MLTrainingRun = {
   id: string;
-  model_type: ClassicalModelType;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  base_model_name: string | null;
   model_display_name: string;
   status: TrainingRunStatus;
   preprocessing_config: Record<string, unknown>;
   text_composition_config: Record<string, unknown>;
   tfidf_config: Record<string, unknown>;
+  transformer_config: Record<string, unknown>;
   model_hyperparameters: Record<string, unknown>;
   split_config: Record<string, unknown>;
   random_seed: number;
@@ -81,6 +86,8 @@ export type MLTrainingRun = {
   artifact_checksum: string | null;
   artifact_version: string | null;
   probability_method: string | null;
+  device_used: string | null;
+  training_duration_seconds: number | null;
   error_summary: string | null;
   started_at: string;
   completed_at: string | null;
@@ -101,7 +108,9 @@ export type MetricSet = {
 export type ModelComparisonItem = {
   training_run_id: string;
   model_display_name: string;
-  model_type: ClassicalModelType;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  base_model_name: string | null;
   status: TrainingRunStatus;
   validation_metrics: MetricSet | null;
   test_metrics: MetricSet | null;
@@ -119,7 +128,9 @@ export type ModelComparison = {
 
 export type PredictionResponse = {
   training_run_id: string;
-  model_type: ClassicalModelType;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
   predicted_label: ArticleLabel;
   real_probability: number | null;
   fake_probability: number | null;
@@ -150,8 +161,18 @@ export async function fetchFromApi<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function formatModelType(modelType: ClassicalModelType) {
-  return modelType === "logistic_regression" ? "Logistic Regression" : "Linear SVM";
+export function formatModelType(modelType: SupportedModelType) {
+  if (modelType === "logistic_regression") {
+    return "Logistic Regression";
+  }
+  if (modelType === "linear_svm") {
+    return "Linear SVM";
+  }
+  return "DistilBERT Transformer";
+}
+
+export function formatModelFamily(modelFamily: ModelFamily) {
+  return modelFamily === "classical" ? "Classical" : "Transformer";
 }
 
 export function formatMetric(value: number | null | undefined) {
@@ -160,4 +181,3 @@ export function formatMetric(value: number | null | undefined) {
   }
   return value.toFixed(3);
 }
-

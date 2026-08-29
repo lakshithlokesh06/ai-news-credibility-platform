@@ -4,8 +4,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.article import ArticleLabel
-from app.models.training import ClassicalModelType, TrainingRunStatus
+from app.models.training import ClassicalModelType, ModelFamily, TrainingRunStatus
 from app.ml.artifacts import ArtifactError, ArtifactStore
+from app.ml.transformer_inference import TransformerInferenceService
 from app.repositories.training_run_repository import TrainingRunRepository
 from app.schemas.ml import PredictionRequest, PredictionResponse
 from app.schemas.preprocessing import PreprocessingConfig, TextCompositionConfig
@@ -27,6 +28,29 @@ class InferenceService:
             raise InferenceError("Training run was not found.")
         if training_run.status != TrainingRunStatus.COMPLETED.value or not training_run.artifact_path:
             raise InferenceError("Only completed training runs with artifacts can be used for inference.")
+
+        if training_run.model_family == ModelFamily.TRANSFORMER.value:
+            try:
+                predicted_label, real_probability, fake_probability, confidence, model_name = (
+                    TransformerInferenceService(self.artifact_store.base_dir).predict(training_run, request)
+                )
+            except (ArtifactError, ValueError, RuntimeError) as exc:
+                raise InferenceError(str(exc)) from exc
+            return PredictionResponse(
+                training_run_id=training_run.id,
+                model_family=ModelFamily.TRANSFORMER,
+                model_type=ClassicalModelType(training_run.model_type),
+                model_name=model_name or training_run.base_model_name,
+                predicted_label=predicted_label,
+                real_probability=real_probability,
+                fake_probability=fake_probability,
+                confidence=confidence,
+                probability_method=training_run.probability_method,
+                message=(
+                    "Transformer model-based classification from learned dataset patterns; "
+                    "not independent verification of factual truth."
+                ),
+            )
 
         try:
             payload, _metadata = self.artifact_store.load(training_run.artifact_path)
@@ -61,7 +85,9 @@ class InferenceService:
 
         return PredictionResponse(
             training_run_id=training_run.id,
+            model_family=ModelFamily.CLASSICAL,
             model_type=ClassicalModelType(training_run.model_type),
+            model_name=training_run.base_model_name,
             predicted_label=ArticleLabel(predicted_label),
             real_probability=real_probability,
             fake_probability=fake_probability,
@@ -72,4 +98,3 @@ class InferenceService:
                 "not independent verification of factual truth."
             ),
         )
-

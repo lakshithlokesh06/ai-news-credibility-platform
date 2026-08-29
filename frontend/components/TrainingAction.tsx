@@ -55,6 +55,7 @@ export function TrainingAction() {
           >
             <option value="logistic_regression">Logistic Regression</option>
             <option value="linear_svm">Linear SVM</option>
+            <option value="distilbert">DistilBERT Transformer</option>
           </select>
           <select
             value={textMode}
@@ -79,7 +80,12 @@ export function TrainingAction() {
       {status ? (
         <p className="mt-4 rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">{status}</p>
       ) : null}
+      {modelType === "distilbert" ? (
+        <p className="mt-4 rounded-md bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+          Transformer fine-tuning can take significantly longer than classical baselines and may need
+          Hugging Face model files plus sufficient local memory.
+        </p>
+      ) : null}
     </section>
   );
 }
-

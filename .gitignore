@@ -45,9 +45,15 @@ data/processed/*
 models/artifacts/*
 models/checkpoints/*
 models/trained/*
+models/huggingface-cache/*
 *.joblib
 *.pkl
 *.pickle
+*.bin
+*.safetensors
+pytorch_model*.*
+checkpoint-*/
+training-output/
 training-tmp/
 !data/raw/.gitkeep
 !data/processed/.gitkeep

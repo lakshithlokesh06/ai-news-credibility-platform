@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models.training import ClassicalModelType, TrainingRunStatus
+from app.models.training import ClassicalModelType, ModelFamily, TrainingRunStatus
 from app.repositories.training_run_repository import TrainingRunRepository
 from app.schemas.ml import ModelComparisonItem, ModelComparisonResponse
 
@@ -24,7 +24,9 @@ class ModelComparisonService:
                 ModelComparisonItem(
                     training_run_id=run.id,
                     model_display_name=run.model_display_name,
+                    model_family=ModelFamily(run.model_family),
                     model_type=ClassicalModelType(run.model_type),
+                    base_model_name=run.base_model_name,
                     status=TrainingRunStatus(run.status),
                     validation_metrics=run.validation_metrics,
                     test_metrics=run.test_metrics,
@@ -47,4 +49,3 @@ class ModelComparisonService:
             recommended_training_run_id=recommended,
             recommendation_note=note,
         )
-

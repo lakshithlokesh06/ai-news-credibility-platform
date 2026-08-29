@@ -12,6 +12,12 @@ from app.db.base import Base
 class ClassicalModelType(StrEnum):
     LOGISTIC_REGRESSION = "logistic_regression"
     LINEAR_SVM = "linear_svm"
+    DISTILBERT = "distilbert"
+
+
+class ModelFamily(StrEnum):
+    CLASSICAL = "classical"
+    TRANSFORMER = "transformer"
 
 
 class TrainingRunStatus(StrEnum):
@@ -25,12 +31,15 @@ class MLTrainingRun(Base):
     __tablename__ = "ml_training_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    model_family: Mapped[str] = mapped_column(String(32), nullable=False, default=ModelFamily.CLASSICAL.value, index=True)
     model_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    base_model_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     model_display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     preprocessing_config: Mapped[dict] = mapped_column(JSON, nullable=False)
     text_composition_config: Mapped[dict] = mapped_column(JSON, nullable=False)
     tfidf_config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    transformer_config: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     model_hyperparameters: Mapped[dict] = mapped_column(JSON, nullable=False)
     split_config: Mapped[dict] = mapped_column(JSON, nullable=False)
     random_seed: Mapped[int] = mapped_column(nullable=False)
@@ -46,6 +55,8 @@ class MLTrainingRun(Base):
     artifact_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     artifact_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     probability_method: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    device_used: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    training_duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
     error_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -53,6 +64,12 @@ class MLTrainingRun(Base):
 
     __table_args__ = (
         Index("ix_ml_training_runs_status_started", "status", "started_at"),
+        Index("ix_ml_training_runs_family_status", "model_family", "status"),
         Index("ix_ml_training_runs_model_status", "model_type", "status"),
     )
 
+
+def model_family_for_type(model_type: ClassicalModelType) -> ModelFamily:
+    if model_type == ClassicalModelType.DISTILBERT:
+        return ModelFamily.TRANSFORMER
+    return ModelFamily.CLASSICAL
