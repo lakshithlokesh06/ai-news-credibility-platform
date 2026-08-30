@@ -29,9 +29,10 @@ export default function AboutPage() {
             The current application includes dataset ingestion, canonical REAL
             and FAKE labels, classical and transformer model training,
             evaluation, artifact-backed inference, model comparison, and local
-            model explanations. It does not perform external fact-checking,
-            claim verification, web search, scraping, RAG, LLM analysis, source
-            reputation scoring, or prediction history.
+            model explanations with saved analysis history. It does not perform
+            external fact-checking, claim verification, web search, scraping,
+            RAG, LLM analysis, source reputation scoring, or live news
+            ingestion.
           </p>
         </section>
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -62,6 +63,23 @@ export default function AboutPage() {
               Attribution is not fact verification. An influential word is not
               automatically true or false; it reflects how the selected trained
               artifact responded to patterns learned from its dataset.
+            </p>
+          </div>
+        </section>
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <h2 className="text-xl font-semibold text-ink">Saved history</h2>
+          <div className="mt-4 grid gap-4 text-sm leading-6 text-slate-600 md:grid-cols-2">
+            <p>
+              Saved analysis history stores submitted article titles and
+              content, model metadata, prediction probabilities, confidence,
+              and any normalized explanation results in the configured
+              PostgreSQL database.
+            </p>
+            <p>
+              Dataset statistics describe imported labeled training data,
+              evaluation metrics describe held-out model performance, and
+              history analytics describe only articles analyzed and saved in
+              this local application.
             </p>
           </div>
         </section>

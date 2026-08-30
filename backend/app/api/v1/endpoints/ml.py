@@ -11,6 +11,7 @@ from app.ml.inference import InferenceError, InferenceService
 from app.ml.training_service import TrainingService
 from app.models.training import TrainingRunStatus
 from app.repositories.training_run_repository import TrainingRunRepository
+from app.services.history import AnalysisHistoryService, HistoryError
 from app.schemas.ml import (
     MLTrainingRunResponse,
     ModelComparisonResponse,
@@ -83,14 +84,26 @@ async def predict_with_model(
     http_request: Request,
     db: Session = Depends(get_db),
 ) -> PredictionResponse:
+    repository = TrainingRunRepository(db)
+    training_run = repository.get(training_run_id)
     service = InferenceService(
         db,
         artifact_base_dir=getattr(http_request.app.state, "artifact_base_dir", None),
     )
     try:
-        return service.predict(training_run_id, request)
+        prediction = service.predict(training_run_id, request)
     except InferenceError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if request.save_to_history:
+        if training_run is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Training run was not found.")
+        analysis = AnalysisHistoryService(db).create_from_prediction(
+            training_run=training_run,
+            request=request,
+            prediction=prediction,
+        )
+        prediction = prediction.model_copy(update={"analysis_id": analysis.id})
+    return prediction
 
 
 @router.post("/models/{training_run_id}/explain", response_model=ExplanationResponse)
@@ -100,17 +113,59 @@ async def explain_model_prediction(
     http_request: Request,
     db: Session = Depends(get_db),
 ) -> ExplanationResponse:
+    history_service = AnalysisHistoryService(db)
+    analysis = None
+    if request.analysis_id is not None:
+        try:
+            analysis = history_service.validate_for_explanation(
+                analysis_id=request.analysis_id,
+                training_run_id=training_run_id,
+                request=request,
+            )
+        except HistoryError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"message": str(exc), "error_type": exc.error_type},
+            ) from exc
+
     service = ExplanationService(
         db,
         artifact_base_dir=getattr(http_request.app.state, "artifact_base_dir", None),
     )
     try:
-        return service.explain(training_run_id, request)
+        explanation = service.explain(training_run_id, request)
     except ExplanationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"message": str(exc), "error_type": exc.error_type},
         ) from exc
+    if analysis is not None:
+        history_service.attach_explanation(analysis, explanation)
+        explanation = explanation.model_copy(update={"analysis_id": analysis.id})
+    elif request.save_to_history:
+        training_run = TrainingRunRepository(db).get(training_run_id)
+        if training_run is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Training run was not found.")
+        prediction = PredictionResponse(
+            training_run_id=explanation.training_run_id,
+            model_family=explanation.model_family,
+            model_type=explanation.model_type,
+            model_name=explanation.model_name,
+            predicted_label=explanation.predicted_label,
+            real_probability=explanation.real_probability,
+            fake_probability=explanation.fake_probability,
+            confidence=explanation.confidence,
+            probability_method=explanation.probability_method,
+            message=explanation.message,
+        )
+        analysis = history_service.create_from_prediction(
+            training_run=training_run,
+            request=request,
+            prediction=prediction,
+        )
+        history_service.attach_explanation(analysis, explanation)
+        explanation = explanation.model_copy(update={"analysis_id": analysis.id})
+    return explanation
 
 
 @router.get("/model-comparison", response_model=ModelComparisonResponse)

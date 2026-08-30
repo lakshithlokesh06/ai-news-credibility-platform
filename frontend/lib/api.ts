@@ -132,6 +132,7 @@ export type ModelComparison = {
 
 export type PredictionResponse = {
   training_run_id: string;
+  analysis_id: string | null;
   model_family: ModelFamily;
   model_type: SupportedModelType;
   model_name: string | null;
@@ -156,6 +157,7 @@ export type InfluentialItem = {
 
 export type ExplanationResponse = {
   training_run_id: string;
+  analysis_id: string | null;
   model_family: ModelFamily;
   model_type: SupportedModelType;
   model_name: string | null;
@@ -170,6 +172,92 @@ export type ExplanationResponse = {
   influences_toward_fake: InfluentialItem[];
   limitations: string[];
   message: string;
+};
+
+export type AnalysisHistorySummary = {
+  id: string;
+  training_run_id: string | null;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
+  model_display_name: string;
+  title: string | null;
+  article_preview: string | null;
+  predicted_label: ArticleLabel;
+  real_probability: number | null;
+  fake_probability: number | null;
+  confidence: number | null;
+  explanation_available: boolean;
+  explanation_method: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnalysisExplanationDetail = {
+  explanation_method: string;
+  explained_class: ArticleLabel;
+  influences_toward_real: InfluentialItem[];
+  influences_toward_fake: InfluentialItem[];
+  limitations: string[];
+  message: string | null;
+  generated_at: string;
+};
+
+export type AnalysisHistoryDetail = {
+  id: string;
+  training_run_id: string | null;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
+  model_display_name: string;
+  title: string | null;
+  content: string | null;
+  text_composition_mode: string | null;
+  predicted_label: ArticleLabel;
+  real_probability: number | null;
+  fake_probability: number | null;
+  confidence: number | null;
+  probability_method: string | null;
+  explanation_status: string;
+  explanation: AnalysisExplanationDetail | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HistoryDistributionItem = {
+  name: string;
+  count: number;
+  percentage: number | null;
+};
+
+export type TrainingRunHistoryItem = {
+  training_run_id: string | null;
+  model_display_name: string;
+  count: number;
+  percentage: number | null;
+};
+
+export type RecentHistoryVolumeItem = {
+  date: string;
+  count: number;
+};
+
+export type HistoryStatistics = {
+  total_saved_analyses: number;
+  likely_real_count: number;
+  likely_fake_count: number;
+  likely_real_percentage: number | null;
+  likely_fake_percentage: number | null;
+  average_confidence: number | null;
+  average_real_confidence: number | null;
+  average_fake_confidence: number | null;
+  analyses_with_explanations: number;
+  analyses_without_explanations: number;
+  model_family_distribution: HistoryDistributionItem[];
+  model_type_distribution: HistoryDistributionItem[];
+  training_run_distribution: TrainingRunHistoryItem[];
+  recent_volume: RecentHistoryVolumeItem[];
+  interpretation: string;
 };
 
 export type PaginatedResponse<T> = {
@@ -213,6 +301,13 @@ export function formatMetric(value: number | null | undefined) {
     return "N/A";
   }
   return value.toFixed(3);
+}
+
+export function formatPercentage(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "N/A";
+  }
+  return `${value.toFixed(1)}%`;
 }
 
 export function formatExplanationMethod(method: string | null | undefined) {

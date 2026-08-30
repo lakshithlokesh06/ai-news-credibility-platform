@@ -57,6 +57,7 @@ training-output/
 training-tmp/
 shap-cache/
 explanations/
+history-exports/
 *.shap
 !data/raw/.gitkeep
 !data/processed/.gitkeep

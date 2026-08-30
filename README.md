@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, model inference APIs, and explicit explainability APIs. It does not implement LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, or prediction history.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, model inference APIs, explicit explainability APIs, persisted analysis history, and history analytics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, or live news APIs.
 
 ## Purpose
 
@@ -13,10 +13,10 @@ The system should provide model-based credibility and misinformation predictions
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, and transformer services
-- Next.js frontend shell with professional product navigation, live data overview, model registry, evaluation dashboard, and inference workspace
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, explainability services, and history services
+- Next.js frontend shell with professional product navigation, live data overview, model registry, evaluation dashboard, inference workspace, history dashboard, and history detail views
 - PostgreSQL development database via Docker Compose
-- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, and model comparison
+- Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, explainability, analysis history, analytics, and model comparison
 - Documentation for the current architecture and roadmap
 
 ## Technology Stack
@@ -119,6 +119,10 @@ The backend exposes:
 - `POST /api/v1/ml/models/{training_run_id}/predict`
 - `POST /api/v1/ml/models/{training_run_id}/explain`
 - `GET /api/v1/ml/model-comparison`
+- `GET /api/v1/history`
+- `GET /api/v1/history/statistics`
+- `GET /api/v1/history/{analysis_id}`
+- `DELETE /api/v1/history/{analysis_id}`
 
 ## Dataset Imports
 
@@ -274,6 +278,34 @@ Transformer explanations load the saved fine-tuned artifact and tokenizer for th
 
 SHAP and feature attribution explain model behavior; they do not verify factual claims. Influential words are not automatically false or true, and attribution reflects how the trained model responded to patterns learned from its dataset.
 
+## Analysis History
+
+The saved analysis flow is:
+
+```text
+Article
+-> Selected Model
+-> Prediction
+-> Optional Explanation
+-> Persisted Analysis Record
+-> History
+-> History Analytics
+```
+
+Prediction persistence is optional at the API level. `POST /api/v1/ml/models/{training_run_id}/predict` accepts `save_to_history: true` and returns `analysis_id` when a record is saved. Standard programmatic predictions remain non-persistent by default.
+
+Explanations can attach to an existing saved analysis by passing `analysis_id` to `POST /api/v1/ml/models/{training_run_id}/explain`. The backend validates that the saved analysis belongs to the same training run and that the submitted title/content match the saved input. History detail pages read persisted prediction and explanation data; they do not rerun inference or SHAP.
+
+Saved history is different from the training dataset. It stores user-submitted article text, prediction outputs, model metadata, and normalized explanation results in the configured PostgreSQL database. History list and statistics endpoints do not return full article bodies; full text is returned only from the individual detail endpoint.
+
+Statistics are intentionally separated:
+
+- Dataset statistics describe imported labeled training data.
+- Evaluation metrics describe trained model performance on held-out labeled data.
+- History analytics describe articles analyzed and saved by this application.
+
+A history distribution such as 60% `FAKE` means 60% of saved analyses were classified as likely misinformation by selected models. It does not mean 60% of all news is fake.
+
 ## Transformer Training
 
 The transformer training pipeline is:
@@ -340,8 +372,9 @@ npm run build
 
 - `/` - landing page
 - `/data` - dataset overview, latest imports, and article browser
-- `/analyze` - model inference and explicit explanation workspace for completed classical and transformer runs
-- `/history` - future prediction history
+- `/analyze` - model inference, automatic UI-side history saving, and explicit explanation workspace
+- `/history` - saved analysis dashboard with filters, analytics, and summaries
+- `/history/[analysisId]` - saved analysis detail with persisted prediction/explanation data and deletion
 - `/models` - model registry and training action with model-family awareness
 - `/evaluation` - validation/test metrics and model comparison dashboard across model families
 - `/about` - project information
@@ -352,6 +385,6 @@ npm run build
 - NLP preprocessing extensions for tokenization, optional stop-word handling, and feature extraction
 - Additional transformer model options and tuning controls
 - Additional confidence scoring and calibration workflows
-- Richer explanation views and future persisted explanation references
-- Prediction history and audit trail
+- Richer explanation views and export workflows
+- Authentication and multi-user ownership
 - Dataset provenance and richer experiment metadata

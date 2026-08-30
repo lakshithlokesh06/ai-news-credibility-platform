@@ -139,6 +139,7 @@ class PaginatedTrainingRunsResponse(BaseModel):
 class PredictionRequest(BaseModel):
     title: str | None = Field(default=None, max_length=1000)
     content: str | None = None
+    save_to_history: bool = False
 
 
 class ExplanationConfig(BaseModel):
@@ -152,10 +153,12 @@ class ExplanationConfig(BaseModel):
 
 class ExplanationRequest(PredictionRequest):
     explanation: ExplanationConfig = Field(default_factory=ExplanationConfig)
+    analysis_id: UUID | None = None
 
 
 class PredictionResponse(BaseModel):
     training_run_id: UUID
+    analysis_id: UUID | None = None
     model_family: ModelFamily
     model_type: ClassicalModelType
     model_name: str | None
@@ -180,6 +183,7 @@ class InfluentialItem(BaseModel):
 
 class ExplanationResponse(BaseModel):
     training_run_id: UUID
+    analysis_id: UUID | None = None
     model_family: ModelFamily
     model_type: ClassicalModelType
     model_name: str | None

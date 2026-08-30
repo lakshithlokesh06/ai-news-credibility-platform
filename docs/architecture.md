@@ -8,7 +8,7 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, and explicit model explainability. LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, and prediction history are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, explicit model explainability, persisted analysis history, and history analytics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, and live news APIs are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
@@ -54,6 +54,18 @@ Article
 -> Human-Readable Explanation
 ```
 
+The current history persistence pipeline is:
+
+```text
+Analyze UI
+-> Inference Service
+-> Prediction
+-> Optional Explainability Service
+-> Persistence Service
+-> PostgreSQL
+-> History UI
+```
+
 ## Frontend
 
 The Next.js frontend provides the user-facing shell for the future analysis platform:
@@ -61,7 +73,7 @@ The Next.js frontend provides the user-facing shell for the future analysis plat
 - Landing page for responsible product positioning
 - Dataset overview page backed by live API data
 - Inference and explanation workspace for completed classical and transformer models
-- Future prediction history
+- Saved analysis history, filtering, analytics, and detail views
 - Model registry and training action with model-family awareness
 - Evaluation dashboard backed by stored validation/test metrics across model families
 - About page documenting scope and constraints
@@ -77,8 +89,8 @@ The FastAPI backend is organized by responsibility:
 - `db/` contains SQLAlchemy engine/session setup and declarative metadata
 - `models/` contains SQLAlchemy persistence models
 - `schemas/` contains Pydantic request and response contracts
-- `repositories/` contains persistence access patterns
-- `services/` contains business workflow orchestration, CSV ingestion, preprocessing, and statistics
+- `repositories/` contains persistence access patterns for imports, articles, training runs, and analysis history
+- `services/` contains business workflow orchestration, CSV ingestion, preprocessing, dataset statistics, and analysis-history persistence/analytics
 - `nlp/` will contain future specialized NLP preprocessing and feature extraction components
 - `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, transformer dataset/tokenization/device/artifact helpers, evaluation, inference, and comparison helpers
 - `explainability/` contains explanation configuration, classical attribution, transformer SHAP attribution, SHAP adapters, token aggregation, normalization, and orchestration services
@@ -98,8 +110,9 @@ Current persistence tables:
 - `news_articles`: canonical imported article records with `REAL`/`FAKE` labels, optional metadata, duplicate keys, and import-run references
 - `dataset_import_runs`: auditable import-run records with status, row counts, duplicate counts, invalid counts, start/completion timestamps, and error summaries
 - `ml_training_runs`: auditable training-run records with model type, model family, base model name, status, preprocessing configuration, text composition configuration, TF-IDF configuration, transformer configuration, selected device, training duration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, and failure information
+- `analysis_records`: saved local analysis records with model metadata, submitted title/content, prediction probabilities, explanation status, normalized explanation JSON, and timestamps
 
-No prediction-history or model-result tables have been introduced yet.
+No authentication or user-ownership tables have been introduced yet. The current installation is treated as a single-user/local application.
 
 ## Canonical Article Schema
 
@@ -185,13 +198,41 @@ Explainability is separated from training, inference, routing, and persistence u
 - `normalization.py`: direction-aware ranking and frontend response normalization
 - `service.py`: training-run validation, prediction reuse, family dispatch, and response assembly
 
-The backend exposes `POST /api/v1/ml/models/{training_run_id}/explain`. The endpoint validates that the selected training run exists, completed successfully, and has a controlled artifact path. It runs normal inference first, then computes bounded explanations. Explanation results are not persisted and do not affect training records.
+The backend exposes `POST /api/v1/ml/models/{training_run_id}/explain`. The endpoint validates that the selected training run exists, completed successfully, and has a controlled artifact path. It runs normal inference first, then computes bounded explanations. Explanation results do not affect training records and are persisted only when attached to a saved analysis.
 
 Classical explanations use the exact fitted vectorizer and classifier from the artifact. Logistic Regression defaults to local coefficient-times-TF-IDF contributions, with optional SHAP linear attribution. Linear SVM explanations use the underlying fitted linear estimators inside the calibrated wrapper, so they describe the decision function rather than calibrated probability behavior.
 
 Transformer explanations use the saved fine-tuned model, tokenizer, label mapping, and transformer-safe text composition from the selected run. SHAP text attribution is bounded by maximum sequence length and maximum evaluations. Raw SHAP structures remain internal; API responses expose normalized influential tokens or phrases grouped by direction.
 
 Attribution direction is explicitly mapped to canonical `REAL` and `FAKE` labels. The frontend presents these as influences toward likely credible or likely misinformation. Scores explain model behavior for one input; they are not performance metrics and are not mixed into evaluation dashboards.
+
+## Analysis History
+
+Analysis history is intentionally separate from ML inference and explainability. The persistence service receives already-computed prediction or explanation responses and stores those exact normalized values, preventing saved history from disagreeing with what the user originally saw.
+
+The `analysis_records` table stores:
+
+- selected training run reference with `ON DELETE SET NULL`
+- copied model family, model type, model name, and display name for historical resilience
+- submitted title and content
+- text composition mode
+- predicted `REAL`/`FAKE` label
+- probabilities, confidence, and probability method
+- explanation status, method, explained class, normalized influential items, limitations, and generation timestamp
+- created and updated timestamps
+
+The current design stores normalized explanation data in JSON columns on `analysis_records` because each saved analysis has at most one current explanation snapshot. Raw SHAP objects, tensors, tokenizer objects, model artifacts, and large intermediate arrays are never persisted.
+
+History APIs:
+
+- `GET /api/v1/history`: paginated summaries with filters for prediction, model family, model type, training run, explanation availability, date range, and text search
+- `GET /api/v1/history/statistics`: aggregate statistics derived from saved analyses
+- `GET /api/v1/history/{analysis_id}`: full saved analysis detail, including article body and persisted explanation when present
+- `DELETE /api/v1/history/{analysis_id}`: deletes only the saved analysis record
+
+History list and statistics responses avoid returning full article bodies. The detail endpoint returns full content so users can review the original saved analysis. Opening a history detail does not load model artifacts, rerun inference, or rerun SHAP.
+
+Dataset statistics, evaluation metrics, and history analytics are different concepts. Dataset statistics describe imported labeled training data. Evaluation metrics describe held-out model performance. History analytics describe aggregate characteristics of articles users analyzed and saved locally.
 
 ## Transformer Classifier
 
@@ -236,6 +277,6 @@ The model comparison workflow compares metrics across models, datasets, evaluati
 
 Evaluation should support reproducible test splits and standard classification metrics such as accuracy, precision, recall, F1, ROC-AUC, calibration, and confusion matrices.
 
-### Prediction History
+### Authentication And Ownership
 
-Prediction history should be added only after the prediction API contract is designed. It should capture request metadata, model version, confidence, explanation references, and timestamps without storing secrets or unnecessary user data.
+Authentication and per-user ownership can be added later. The current history schema avoids fake user IDs while keeping a clear place to introduce ownership in a future migration.

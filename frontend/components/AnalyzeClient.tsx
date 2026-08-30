@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Loader2, SendHorizontal } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, SendHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -25,6 +25,7 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
   const [content, setContent] = useState("");
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [explanation, setExplanation] = useState<ExplanationResponse | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [explanationError, setExplanationError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +34,7 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
   async function submitPrediction() {
     setPrediction(null);
     setExplanation(null);
+    setAnalysisId(null);
     setError(null);
     setExplanationError(null);
     if (!selectedModel) {
@@ -48,14 +50,16 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
       const response = await fetch(`${apiBaseUrl}/api/v1/ml/models/${selectedModel}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, save_to_history: true }),
       });
       const payload = await response.json();
       if (!response.ok) {
         setError(typeof payload.detail === "string" ? payload.detail : "Prediction failed.");
         return;
       }
-      setPrediction(payload as PredictionResponse);
+      const predictionPayload = payload as PredictionResponse;
+      setPrediction(predictionPayload);
+      setAnalysisId(predictionPayload.analysis_id);
     } catch {
       setError("Backend inference API is not reachable.");
     } finally {
@@ -78,6 +82,7 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
         body: JSON.stringify({
           title,
           content,
+          analysis_id: analysisId,
           explanation: {
             max_items: 8,
             method: "auto",
@@ -98,7 +103,9 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
         );
         return;
       }
-      setExplanation(payload as ExplanationResponse);
+      const explanationPayload = payload as ExplanationResponse;
+      setExplanation(explanationPayload);
+      setAnalysisId(explanationPayload.analysis_id ?? analysisId);
     } catch {
       setExplanationError("Backend explanation API is not reachable.");
     } finally {
@@ -185,6 +192,12 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
             <p>Model family: {formatModelFamily(prediction.model_family)}</p>
             <p>Model name: {prediction.model_name ?? formatModelType(prediction.model_type)}</p>
             <p>Probability method: {prediction.probability_method ?? "Not available"}</p>
+            {analysisId ? (
+              <p className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-800">
+                <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+                Analysis saved to history
+              </p>
+            ) : null}
             <p className="rounded-md bg-slate-50 px-4 py-3 leading-6">{prediction.message}</p>
             <button
               type="button"

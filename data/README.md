@@ -72,3 +72,9 @@ curl -X POST http://localhost:8000/api/v1/dataset-imports \
 ```
 
 Small synthetic CSV fixtures used by automated tests live only in the test suite and are not real datasets.
+
+## Saved Analysis Data
+
+Saved analysis history is not stored in this directory. When enabled through the analysis API or UI, submitted article titles and content are stored in the configured PostgreSQL database as `analysis_records`.
+
+History analytics describe saved analyses created by local users of the application. They are separate from imported training-data statistics and model evaluation metrics.
