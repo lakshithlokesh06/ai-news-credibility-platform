@@ -78,3 +78,9 @@ Small synthetic CSV fixtures used by automated tests live only in the test suite
 Saved analysis history is not stored in this directory. When enabled through the analysis API or UI, submitted article titles and content are stored in the configured PostgreSQL database as `analysis_records`.
 
 History analytics describe saved analyses created by local users of the application. They are separate from imported training-data statistics and model evaluation metrics.
+
+## Monitoring Data
+
+Model monitoring does not write files in this directory. Reference profiles and aggregate diagnostics are stored in PostgreSQL and derived from completed training runs plus saved `analysis_records`.
+
+Monitoring overview/detail APIs avoid returning full article bodies. They report aggregate drift, confidence, and usage metrics for a training run and do not fetch external URLs, verify claims, rerun inference, rerun SHAP, or retrain models.

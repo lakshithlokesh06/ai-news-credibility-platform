@@ -5,5 +5,6 @@ export const navigationItems = [
   { href: "/history", label: "History" },
   { href: "/models", label: "Models" },
   { href: "/evaluation", label: "Evaluation" },
+  { href: "/monitoring", label: "Monitoring" },
   { href: "/about", label: "About" },
 ] as const;

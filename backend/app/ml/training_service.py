@@ -13,6 +13,8 @@ from app.ml.features import create_tfidf_vectorizer
 from app.ml.splitting import stratified_split
 from app.ml.trainers import create_classifier
 from app.ml.transformer_training import TransformerTrainingService
+from app.monitoring.config import MonitoringError
+from app.monitoring.service import MonitoringService
 from app.repositories.training_run_repository import TrainingRunRepository
 from app.schemas.ml import TrainingRunCreate
 
@@ -56,6 +58,7 @@ class TrainingService:
                 training_run.status = TrainingRunStatus.COMPLETED.value
                 training_run.training_duration_seconds = training_run.training_duration_seconds or round(perf_counter() - started, 6)
                 training_run.completed_at = datetime.now(UTC)
+                self._generate_monitoring_profile(training_run)
                 self.db.commit()
                 self.db.refresh(training_run)
                 return training_run
@@ -118,6 +121,7 @@ class TrainingService:
             training_run.device_used = "cpu"
             training_run.training_duration_seconds = round(perf_counter() - started, 6)
             training_run.completed_at = datetime.now(UTC)
+            self._generate_monitoring_profile(training_run)
             self.db.commit()
             self.db.refresh(training_run)
             return training_run
@@ -142,3 +146,13 @@ class TrainingService:
         else:
             readable_type = "DistilBERT Transformer"
         return f"{readable_type} {timestamp.strftime('%Y-%m-%d %H:%M')}"
+
+    def _generate_monitoring_profile(self, training_run: MLTrainingRun) -> None:
+        try:
+            MonitoringService(self.db, self.artifact_store.base_dir).generate_reference_profile(
+                training_run.id,
+                refresh=True,
+            )
+        except (MonitoringError, TrainingDatasetError):
+            # Monitoring profiles can be explicitly backfilled later; training artifacts remain valid.
+            return

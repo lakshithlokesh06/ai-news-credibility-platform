@@ -1,4 +1,5 @@
-import { Boxes, GitCompare } from "lucide-react";
+import Link from "next/link";
+import { Activity, Boxes, GitCompare } from "lucide-react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
@@ -67,6 +68,7 @@ export default async function ModelsPage() {
                       <th className="px-3 py-3 font-semibold">Test F1</th>
                       <th className="px-3 py-3 font-semibold">Accuracy</th>
                       <th className="px-3 py-3 font-semibold">ROC-AUC</th>
+                      <th className="px-3 py-3 font-semibold">Monitoring</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -92,6 +94,19 @@ export default async function ModelsPage() {
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.f1)}</td>
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.accuracy)}</td>
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.roc_auc)}</td>
+                        <td className="px-3 py-4">
+                          {model.status === "completed" ? (
+                            <Link
+                              href={`/monitoring/${model.id}`}
+                              className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-ink"
+                            >
+                              <Activity aria-hidden="true" className="h-4 w-4" />
+                              View
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-slate-500">Available after completion</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

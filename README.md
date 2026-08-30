@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, model inference APIs, explicit explainability APIs, persisted analysis history, and history analytics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, or live news APIs.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, model inference APIs, explicit explainability APIs, persisted analysis history, history analytics, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
 
 ## Purpose
 
@@ -13,8 +13,8 @@ The system should provide model-based credibility and misinformation predictions
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, explainability services, and history services
-- Next.js frontend shell with professional product navigation, live data overview, model registry, evaluation dashboard, inference workspace, history dashboard, and history detail views
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, explainability services, history services, and monitoring services
+- Next.js frontend shell with professional product navigation, live data overview, model registry, evaluation dashboard, inference workspace, history dashboard, history detail views, and monitoring dashboards
 - PostgreSQL development database via Docker Compose
 - Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, explainability, analysis history, analytics, and model comparison
 - Documentation for the current architecture and roadmap
@@ -123,6 +123,9 @@ The backend exposes:
 - `GET /api/v1/history/statistics`
 - `GET /api/v1/history/{analysis_id}`
 - `DELETE /api/v1/history/{analysis_id}`
+- `GET /api/v1/monitoring`
+- `GET /api/v1/monitoring/models/{training_run_id}`
+- `POST /api/v1/monitoring/models/{training_run_id}/reference-profile`
 
 ## Dataset Imports
 
@@ -306,6 +309,31 @@ Statistics are intentionally separated:
 
 A history distribution such as 60% `FAKE` means 60% of saved analyses were classified as likely misinformation by selected models. It does not mean 60% of all news is fake.
 
+## Model Monitoring
+
+The monitoring flow is:
+
+```text
+Completed Training Run
+-> Reference Profile From Training Data
+-> Saved Analysis Records
+-> Input Drift / Prediction Drift / Confidence / Usage Diagnostics
+-> Monitoring Dashboard
+```
+
+Reference profiles are generated for completed training runs and stored in `model_monitoring_profiles`. Classical profiles use the fitted TF-IDF artifact only for feature metadata; transformer profiles use model-independent text statistics. Monitoring does not load model weights for prediction, rerun inference, rerun SHAP, or retrain models.
+
+Monitoring APIs are scoped to one training run at a time. They compare recent saved `analysis_records` for that run against the stored reference profile and return aggregate diagnostics only. Overview and detail responses avoid article bodies; history detail remains the only UI route that returns the full saved article content.
+
+Current diagnostics include:
+
+- input text/title length drift with PSI and KS statistics
+- predicted `REAL`/`FAKE` distribution drift with Jensen-Shannon divergence
+- confidence averages, low/high confidence rates, and confidence histograms
+- usage volume, explanation generation rate, and last analyzed timestamp
+
+Monitoring is operational telemetry, not truth verification. It cannot measure live production accuracy without labels, cannot verify claims, and does not automatically retrain or deploy models.
+
 ## Transformer Training
 
 The transformer training pipeline is:
@@ -377,6 +405,8 @@ npm run build
 - `/history/[analysisId]` - saved analysis detail with persisted prediction/explanation data and deletion
 - `/models` - model registry and training action with model-family awareness
 - `/evaluation` - validation/test metrics and model comparison dashboard across model families
+- `/monitoring` - model monitoring overview from saved analysis history
+- `/monitoring/[trainingRunId]` - per-model monitoring diagnostics and reference-profile refresh
 - `/about` - project information
 
 ## Roadmap
@@ -386,5 +416,6 @@ npm run build
 - Additional transformer model options and tuning controls
 - Additional confidence scoring and calibration workflows
 - Richer explanation views and export workflows
+- Optional alerting and export workflows for monitoring diagnostics
 - Authentication and multi-user ownership
 - Dataset provenance and richer experiment metadata

@@ -8,7 +8,7 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, explicit model explainability, persisted analysis history, and history analytics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, and live news APIs are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, explicit model explainability, persisted analysis history, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
@@ -66,6 +66,16 @@ Analyze UI
 -> History UI
 ```
 
+The current monitoring pipeline is:
+
+```text
+Completed Training Run
+-> Stored Reference Profile
+-> Saved Analysis Records
+-> Drift / Confidence / Usage Metrics
+-> Monitoring UI
+```
+
 ## Frontend
 
 The Next.js frontend provides the user-facing shell for the future analysis platform:
@@ -76,6 +86,7 @@ The Next.js frontend provides the user-facing shell for the future analysis plat
 - Saved analysis history, filtering, analytics, and detail views
 - Model registry and training action with model-family awareness
 - Evaluation dashboard backed by stored validation/test metrics across model families
+- Monitoring overview and per-model diagnostic pages backed by saved analysis history
 - About page documenting scope and constraints
 
 The frontend communicates with the backend through a configurable API base URL.
@@ -89,11 +100,12 @@ The FastAPI backend is organized by responsibility:
 - `db/` contains SQLAlchemy engine/session setup and declarative metadata
 - `models/` contains SQLAlchemy persistence models
 - `schemas/` contains Pydantic request and response contracts
-- `repositories/` contains persistence access patterns for imports, articles, training runs, and analysis history
+- `repositories/` contains persistence access patterns for imports, articles, training runs, analysis history, and monitoring profiles
 - `services/` contains business workflow orchestration, CSV ingestion, preprocessing, dataset statistics, and analysis-history persistence/analytics
 - `nlp/` will contain future specialized NLP preprocessing and feature extraction components
 - `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, transformer dataset/tokenization/device/artifact helpers, evaluation, inference, and comparison helpers
 - `explainability/` contains explanation configuration, classical attribution, transformer SHAP attribution, SHAP adapters, token aggregation, normalization, and orchestration services
+- `monitoring/` contains reference-profile generation, current-window aggregation, drift metrics, status rules, and monitoring orchestration
 - `utils/` contains shared implementation utilities
 
 ## Database
@@ -111,6 +123,7 @@ Current persistence tables:
 - `dataset_import_runs`: auditable import-run records with status, row counts, duplicate counts, invalid counts, start/completion timestamps, and error summaries
 - `ml_training_runs`: auditable training-run records with model type, model family, base model name, status, preprocessing configuration, text composition configuration, TF-IDF configuration, transformer configuration, selected device, training duration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, and failure information
 - `analysis_records`: saved local analysis records with model metadata, submitted title/content, prediction probabilities, explanation status, normalized explanation JSON, and timestamps
+- `model_monitoring_profiles`: per-training-run reference profiles with profile version, status, sample count, reference distributions/statistics, feature metadata, and timestamps
 
 No authentication or user-ownership tables have been introduced yet. The current installation is treated as a single-user/local application.
 
@@ -234,6 +247,30 @@ History list and statistics responses avoid returning full article bodies. The d
 
 Dataset statistics, evaluation metrics, and history analytics are different concepts. Dataset statistics describe imported labeled training data. Evaluation metrics describe held-out model performance. History analytics describe aggregate characteristics of articles users analyzed and saved locally.
 
+## Model Monitoring
+
+Model monitoring is intentionally separate from training, inference, explainability, and history detail retrieval. It consumes completed training-run metadata, stored reference profiles, and saved `analysis_records` for the selected run.
+
+The `model_monitoring_profiles` table stores one active profile version per completed training run. Profiles include reference label distribution, text/title length distributions, bounded text-length samples for KS statistics, and feature metadata. Classical profiles load the fitted artifact only to record TF-IDF vectorizer metadata such as vocabulary size. Transformer profiles do not load the model; they use model-independent text statistics from the same canonical dataset selection and transformer-safe text composition.
+
+The monitoring service builds a bounded current window from saved analyses and calculates:
+
+- PSI for text length and title length distribution drift
+- KS statistic for text-length distribution shift
+- Jensen-Shannon divergence for prediction distribution drift against training labels
+- confidence averages, low/high confidence rates, probability averages, and confidence histograms
+- usage totals, prediction counts, explanation-generation rate, recent volume, and last-used time
+
+Monitoring responses do not return article bodies. The detail page shows aggregate metrics, status reasons, profile metadata, and limitations. The refresh-profile action regenerates the reference profile for an existing completed training run; it does not retrain a model or alter inference artifacts.
+
+Monitoring, evaluation, and history answer different questions:
+
+- Evaluation reports stored validation/test performance on labeled held-out splits.
+- History records what local users analyzed and optionally saved.
+- Monitoring checks whether recent saved inputs and model outputs look different from the model's reference profile.
+
+Without production labels, monitoring cannot calculate accuracy, precision, recall, F1, or ROC-AUC for saved analyses. Drift and confidence diagnostics are signals for review, not factual verification and not automatic retraining triggers.
+
 ## Transformer Classifier
 
 Transformer support is implemented as a model family alongside the classical baselines:
@@ -264,6 +301,10 @@ Additional transformer classifiers can be added behind the existing model-family
 ### Confidence Scoring
 
 Confidence scores should be treated as model estimates, not truth guarantees. Current classical and transformer inference paths expose confidence only when probability estimates are available.
+
+### Monitoring Operations
+
+Future monitoring work can add alert thresholds, exports, and richer calibration diagnostics while keeping the current implementation offline and aggregate-only. Automatic retraining and deployment should remain explicit workflows rather than hidden side effects of drift detection.
 
 ### Additional Explainability
 

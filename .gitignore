@@ -58,6 +58,8 @@ training-tmp/
 shap-cache/
 explanations/
 history-exports/
+monitoring-exports/
+monitoring-profiles/
 *.shap
 !data/raw/.gitkeep
 !data/processed/.gitkeep

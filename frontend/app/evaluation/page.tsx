@@ -29,7 +29,7 @@ export default async function EvaluationPage() {
       <PageHeader
         eyebrow="Evaluation dashboard"
         title="Evaluation"
-        description="Compare completed classical baseline runs using stored validation and untouched test metrics."
+        description="Compare completed runs using stored validation and untouched test metrics. Production usage and drift diagnostics live in Monitoring."
       />
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {!comparison ? (

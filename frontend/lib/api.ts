@@ -260,6 +260,96 @@ export type HistoryStatistics = {
   interpretation: string;
 };
 
+export type DriftMetricStatus = "stable" | "warning" | "drift_detected" | "insufficient_data";
+export type MonitoringStatus = "healthy" | "watch" | "drift_detected" | "insufficient_data";
+
+export type MonitoringProfile = {
+  id: string;
+  training_run_id: string;
+  profile_version: string;
+  status: string;
+  sample_count: number;
+  reference_statistics: Record<string, unknown>;
+  reference_label_distribution: Record<string, number>;
+  feature_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MonitoringMetric = {
+  metric_name: string;
+  metric_value: number | null;
+  warning_threshold: number | null;
+  drift_threshold: number | null;
+  status: DriftMetricStatus;
+  interpretation: string;
+};
+
+export type ConfidenceMonitoring = {
+  average_confidence: number | null;
+  median_confidence: number | null;
+  low_confidence_rate: number | null;
+  high_confidence_rate: number | null;
+  average_real_probability: number | null;
+  average_fake_probability: number | null;
+  confidence_distribution: number[];
+  confidence_shift: MonitoringMetric;
+};
+
+export type UsageMonitoring = {
+  total_analyses: number;
+  analyses_in_window: number;
+  real_prediction_count: number;
+  fake_prediction_count: number;
+  explanation_generation_rate: number | null;
+  average_confidence: number | null;
+  last_used_at: string | null;
+  recent_volume: RecentHistoryVolumeItem[];
+};
+
+export type ModelMonitoring = {
+  training_run_id: string;
+  model_display_name: string;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
+  monitoring_window: Record<string, number>;
+  reference_profile_status: string;
+  reference_profile: MonitoringProfile | null;
+  sample_counts: Record<string, number>;
+  input_drift_metrics: MonitoringMetric[];
+  prediction_drift: MonitoringMetric;
+  confidence_metrics: ConfidenceMonitoring;
+  usage_metrics: UsageMonitoring;
+  overall_status: MonitoringStatus;
+  status_reasons: string[];
+  limitations: string[];
+};
+
+export type MonitoringOverviewItem = {
+  training_run_id: string;
+  model_display_name: string;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
+  recent_analysis_count: number;
+  monitoring_status: MonitoringStatus;
+  prediction_drift_status: DriftMetricStatus;
+  input_drift_status: DriftMetricStatus;
+  average_confidence: number | null;
+  last_analyzed_at: string | null;
+};
+
+export type MonitoringOverview = {
+  items: MonitoringOverviewItem[];
+  total_completed_models: number;
+  healthy_models: number;
+  models_needing_attention: number;
+  insufficient_data_models: number;
+  recent_analyses: number;
+  limitations: string[];
+};
+
 export type PaginatedResponse<T> = {
   items: T[];
   total: number;
@@ -308,6 +398,18 @@ export function formatPercentage(value: number | null | undefined) {
     return "N/A";
   }
   return `${value.toFixed(1)}%`;
+}
+
+export function formatMonitoringStatus(status: MonitoringStatus | DriftMetricStatus | string) {
+  const labels: Record<string, string> = {
+    healthy: "Healthy",
+    watch: "Watch",
+    stable: "Stable",
+    warning: "Warning",
+    drift_detected: "Drift detected",
+    insufficient_data: "Insufficient data",
+  };
+  return labels[status] ?? status;
 }
 
 export function formatExplanationMethod(method: string | null | undefined) {
