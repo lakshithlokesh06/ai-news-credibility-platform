@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, model inference APIs, explicit explainability APIs, persisted analysis history, history analytics, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, experiment tracking, explicit champion selection, model lifecycle management, model inference APIs, explainability APIs, persisted analysis history, history analytics, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
 
 ## Purpose
 
@@ -13,8 +13,8 @@ The system should provide model-based credibility and misinformation predictions
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, explainability services, history services, and monitoring services
-- Next.js frontend shell with professional product navigation, live data overview, model registry, evaluation dashboard, inference workspace, history dashboard, history detail views, and monitoring dashboards
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, experiment/lifecycle services, explainability services, history services, and monitoring services
+- Next.js frontend shell with professional product navigation, live data overview, model registry, experiment tracking, evaluation dashboard, inference workspace, history dashboard, history detail views, and monitoring dashboards
 - PostgreSQL development database via Docker Compose
 - Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, explainability, analysis history, analytics, and model comparison
 - Documentation for the current architecture and roadmap
@@ -119,6 +119,13 @@ The backend exposes:
 - `POST /api/v1/ml/models/{training_run_id}/predict`
 - `POST /api/v1/ml/models/{training_run_id}/explain`
 - `GET /api/v1/ml/model-comparison`
+- `GET /api/v1/experiments`
+- `GET /api/v1/experiments/{training_run_id}`
+- `POST /api/v1/experiments/compare`
+- `GET /api/v1/models/champion`
+- `POST /api/v1/models/{training_run_id}/promote`
+- `POST /api/v1/models/{training_run_id}/archive`
+- `POST /api/v1/models/{training_run_id}/restore`
 - `GET /api/v1/history`
 - `GET /api/v1/history/statistics`
 - `GET /api/v1/history/{analysis_id}`
@@ -334,6 +341,23 @@ Current diagnostics include:
 
 Monitoring is operational telemetry, not truth verification. It cannot measure live production accuracy without labels, cannot verify claims, and does not automatically retrain or deploy models.
 
+## Experiment Tracking And Lifecycle
+
+Each `ml_training_runs` row is also treated as an experiment run. The experiment API exposes stored run metadata, dataset identifiers, text-composition and preprocessing configuration, hyperparameters, split configuration, validation/test metrics, artifact version/checksum, environment version summary, explainability support, monitoring availability, and lifecycle state.
+
+Training execution status remains separate from lifecycle state:
+
+- `status` tracks execution such as `training`, `completed`, or `failed`.
+- `lifecycle_status` tracks model lifecycle such as `candidate`, `champion`, or `archived`.
+
+New successful training runs become `candidate` by default. Failed and incomplete runs are not candidates. Existing completed runs are safely backfilled to candidate by the lifecycle migration.
+
+Champion promotion is explicit. The champion is the application's preferred/default model, not a claim that it is objectively best in every setting. Promotion validates that the run completed, has validation and test metrics, has required artifact metadata, and has loadable/validated artifacts. Promoting a new champion demotes any existing champion in the same transaction, and a partial unique database index prevents multiple active champions. Lifecycle events record compact audit history for promotions, demotions, archive, and restore actions without introducing fake users.
+
+Archived models remain available historically. Archiving does not delete training runs, metrics, artifacts, monitoring profiles, or saved analysis history. The active champion cannot be archived until another model is promoted. Restoring an archived model returns it to candidate status when its required metadata and artifacts are still valid.
+
+Experiment comparison uses persisted validation or test metrics only. It supports accuracy, precision, recall, F1, and ROC-AUC with a configured primary metric and split. It flags limited comparability when selected runs differ in dataset identifiers, split configuration, or text-composition configuration. Monitoring metrics, confidence, and SHAP attributions are not folded into model-quality rankings.
+
 ## Transformer Training
 
 The transformer training pipeline is:
@@ -404,6 +428,8 @@ npm run build
 - `/history` - saved analysis dashboard with filters, analytics, and summaries
 - `/history/[analysisId]` - saved analysis detail with persisted prediction/explanation data and deletion
 - `/models` - model registry and training action with model-family awareness
+- `/experiments` - experiment tracking, comparison, and champion overview
+- `/experiments/[trainingRunId]` - experiment detail, configuration, metrics, lifecycle events, and champion/archive actions
 - `/evaluation` - validation/test metrics and model comparison dashboard across model families
 - `/monitoring` - model monitoring overview from saved analysis history
 - `/monitoring/[trainingRunId]` - per-model monitoring diagnostics and reference-profile refresh

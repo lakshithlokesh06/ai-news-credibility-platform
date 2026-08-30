@@ -59,6 +59,7 @@ export type ClassicalModelType = "logistic_regression" | "linear_svm";
 export type SupportedModelType = ClassicalModelType | "distilbert";
 export type ModelFamily = "classical" | "transformer";
 export type TrainingRunStatus = "pending" | "training" | "completed" | "failed";
+export type ModelLifecycleStatus = "candidate" | "champion" | "archived";
 
 export type MLTrainingRun = {
   id: string;
@@ -66,9 +67,12 @@ export type MLTrainingRun = {
   model_type: SupportedModelType;
   base_model_name: string | null;
   model_display_name: string;
+  description: string | null;
+  tags: string[];
   explainability_supported: boolean;
   explanation_method: string | null;
   status: TrainingRunStatus;
+  lifecycle_status: ModelLifecycleStatus | null;
   preprocessing_config: Record<string, unknown>;
   text_composition_config: Record<string, unknown>;
   tfidf_config: Record<string, unknown>;
@@ -90,6 +94,8 @@ export type MLTrainingRun = {
   probability_method: string | null;
   device_used: string | null;
   training_duration_seconds: number | null;
+  environment_versions: Record<string, string>;
+  champion_promoted_at: string | null;
   error_summary: string | null;
   started_at: string;
   completed_at: string | null;
@@ -120,6 +126,13 @@ export type ModelComparisonItem = {
   test_metrics: MetricSet | null;
   primary_metric_name: string;
   primary_metric_value: number | null;
+  lifecycle_status: ModelLifecycleStatus | null;
+  is_champion: boolean;
+  dataset_identifiers: string[];
+  text_composition_mode: string | null;
+  rank: number | null;
+  comparability_status: string;
+  comparability_warnings: string[];
 };
 
 export type ModelComparison = {
@@ -128,6 +141,8 @@ export type ModelComparison = {
   items: ModelComparisonItem[];
   recommended_training_run_id: string | null;
   recommendation_note: string | null;
+  comparability_status: string;
+  comparability_warnings: string[];
 };
 
 export type PredictionResponse = {
@@ -350,6 +365,103 @@ export type MonitoringOverview = {
   limitations: string[];
 };
 
+export type LifecycleEvent = {
+  id: string;
+  training_run_id: string;
+  previous_champion_id: string | null;
+  event_type: "promoted" | "demoted" | "archived" | "restored" | string;
+  from_status: string | null;
+  to_status: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type ExperimentSummary = {
+  training_run_id: string;
+  model_display_name: string;
+  description: string | null;
+  tags: string[];
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  base_model_name: string | null;
+  execution_status: TrainingRunStatus;
+  lifecycle_status: ModelLifecycleStatus | null;
+  is_champion: boolean;
+  dataset_identifiers: string[];
+  text_composition_mode: string | null;
+  random_seed: number;
+  train_count: number;
+  validation_count: number;
+  test_count: number;
+  primary_test_metric: number | null;
+  artifact_version: string | null;
+  artifact_checksum: string | null;
+  explainability_supported: boolean;
+  explanation_method: string | null;
+  monitoring_available: boolean;
+  trained_at: string | null;
+  created_at: string;
+};
+
+export type ExperimentDetail = ExperimentSummary & {
+  preprocessing_config: Record<string, unknown>;
+  text_composition_config: Record<string, unknown>;
+  tfidf_config: Record<string, unknown>;
+  transformer_config: Record<string, unknown>;
+  model_hyperparameters: Record<string, unknown>;
+  split_config: Record<string, unknown>;
+  split_distributions: Record<string, unknown>;
+  validation_metrics: MetricSet | null;
+  test_metrics: MetricSet | null;
+  artifact_path: string | null;
+  probability_method: string | null;
+  device_used: string | null;
+  training_duration_seconds: number | null;
+  environment_versions: Record<string, string>;
+  champion_promoted_at: string | null;
+  lifecycle_events: LifecycleEvent[];
+};
+
+export type ExperimentComparisonItem = {
+  training_run_id: string;
+  model_display_name: string;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  base_model_name: string | null;
+  lifecycle_status: ModelLifecycleStatus | null;
+  is_champion: boolean;
+  dataset_identifiers: string[];
+  text_composition_mode: string | null;
+  split_config: Record<string, unknown>;
+  validation_metrics: MetricSet | null;
+  test_metrics: MetricSet | null;
+  training_duration_seconds: number | null;
+  primary_metric_name: string;
+  primary_metric_value: number | null;
+  rank: number | null;
+  difference_from_best: number | null;
+};
+
+export type ExperimentComparison = {
+  metric_source: "validation" | "test";
+  primary_metric: "accuracy" | "precision" | "recall" | "f1" | "roc_auc";
+  comparability_status: "directly_comparable" | "limited_comparability" | "insufficient_metrics";
+  comparability_warnings: string[];
+  champion_training_run_id: string | null;
+  items: ExperimentComparisonItem[];
+};
+
+export type ChampionResponse = {
+  champion: ExperimentSummary | null;
+};
+
+export type LifecycleActionResponse = {
+  training_run_id: string;
+  lifecycle_status: ModelLifecycleStatus | null;
+  previous_champion_id?: string | null;
+  message: string;
+};
+
 export type PaginatedResponse<T> = {
   items: T[];
   total: number;
@@ -410,6 +522,18 @@ export function formatMonitoringStatus(status: MonitoringStatus | DriftMetricSta
     insufficient_data: "Insufficient data",
   };
   return labels[status] ?? status;
+}
+
+export function formatLifecycleStatus(status: ModelLifecycleStatus | null | undefined) {
+  if (!status) {
+    return "Not eligible";
+  }
+  const labels: Record<ModelLifecycleStatus, string> = {
+    candidate: "Candidate",
+    champion: "Champion",
+    archived: "Archived",
+  };
+  return labels[status];
 }
 
 export function formatExplanationMethod(method: string | null | undefined) {

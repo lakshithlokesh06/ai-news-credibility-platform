@@ -8,7 +8,7 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, explicit model explainability, persisted analysis history, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, experiment tracking, champion model selection, lifecycle management, explicit model explainability, persisted analysis history, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
@@ -76,6 +76,16 @@ Completed Training Run
 -> Monitoring UI
 ```
 
+The current experiment lifecycle pipeline is:
+
+```text
+Training Run
+-> Candidate Lifecycle State
+-> Structured Experiment Comparison
+-> Explicit Champion Promotion
+-> Analyze Default Model Selection
+```
+
 ## Frontend
 
 The Next.js frontend provides the user-facing shell for the future analysis platform:
@@ -85,6 +95,7 @@ The Next.js frontend provides the user-facing shell for the future analysis plat
 - Inference and explanation workspace for completed classical and transformer models
 - Saved analysis history, filtering, analytics, and detail views
 - Model registry and training action with model-family awareness
+- Experiment tracking pages for run metadata, comparison, champion selection, archive/restore actions, and lifecycle history
 - Evaluation dashboard backed by stored validation/test metrics across model families
 - Monitoring overview and per-model diagnostic pages backed by saved analysis history
 - About page documenting scope and constraints
@@ -100,12 +111,13 @@ The FastAPI backend is organized by responsibility:
 - `db/` contains SQLAlchemy engine/session setup and declarative metadata
 - `models/` contains SQLAlchemy persistence models
 - `schemas/` contains Pydantic request and response contracts
-- `repositories/` contains persistence access patterns for imports, articles, training runs, analysis history, and monitoring profiles
+- `repositories/` contains persistence access patterns for imports, articles, training runs, lifecycle events, analysis history, and monitoring profiles
 - `services/` contains business workflow orchestration, CSV ingestion, preprocessing, dataset statistics, and analysis-history persistence/analytics
 - `nlp/` will contain future specialized NLP preprocessing and feature extraction components
 - `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, transformer dataset/tokenization/device/artifact helpers, evaluation, inference, and comparison helpers
 - `explainability/` contains explanation configuration, classical attribution, transformer SHAP attribution, SHAP adapters, token aggregation, normalization, and orchestration services
 - `monitoring/` contains reference-profile generation, current-window aggregation, drift metrics, status rules, and monitoring orchestration
+- `services/experiments.py` contains experiment summaries, comparability checks, champion validation, lifecycle actions, and pairwise comparison orchestration
 - `utils/` contains shared implementation utilities
 
 ## Database
@@ -121,7 +133,8 @@ Current persistence tables:
 
 - `news_articles`: canonical imported article records with `REAL`/`FAKE` labels, optional metadata, duplicate keys, and import-run references
 - `dataset_import_runs`: auditable import-run records with status, row counts, duplicate counts, invalid counts, start/completion timestamps, and error summaries
-- `ml_training_runs`: auditable training-run records with model type, model family, base model name, status, preprocessing configuration, text composition configuration, TF-IDF configuration, transformer configuration, selected device, training duration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, and failure information
+- `ml_training_runs`: auditable training-run records with model type, model family, base model name, display metadata, execution status, lifecycle status, preprocessing configuration, text composition configuration, TF-IDF configuration, transformer configuration, selected device, training duration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, champion timestamp, compact environment versions, and failure information
+- `model_lifecycle_events`: compact lifecycle audit events for promotion, demotion, archive, and restore actions
 - `analysis_records`: saved local analysis records with model metadata, submitted title/content, prediction probabilities, explanation status, normalized explanation JSON, and timestamps
 - `model_monitoring_profiles`: per-training-run reference profiles with profile version, status, sample count, reference distributions/statistics, feature metadata, and timestamps
 
@@ -270,6 +283,20 @@ Monitoring, evaluation, and history answer different questions:
 - Monitoring checks whether recent saved inputs and model outputs look different from the model's reference profile.
 
 Without production labels, monitoring cannot calculate accuracy, precision, recall, F1, or ROC-AUC for saved analyses. Drift and confidence diagnostics are signals for review, not factual verification and not automatic retraining triggers.
+
+## Experiment Tracking And Champion Lifecycle
+
+Experiment tracking is built on the existing `ml_training_runs` table rather than a second registry. A training run answers the core experiment questions: model family/type, base model name, dataset identifiers, text composition, preprocessing and hyperparameter configuration, random seed, split configuration, sample counts, persisted validation/test metrics, artifact metadata, timing, explainability support, monitoring availability, and lifecycle state.
+
+Execution status and lifecycle status are separate. `status` records whether training is running, completed, or failed. `lifecycle_status` records whether a completed model is a candidate, champion, or archived. New completed runs become candidates; failed or incomplete runs have no lifecycle candidate state. The migration backfills existing completed runs to candidate without choosing a champion.
+
+Champion selection is explicit and validated by `ExperimentService`. A run must be completed, have artifact metadata, have validation and test metrics, and have loadable or metadata-valid artifacts before promotion. Promotion demotes the previous champion and promotes the new champion in one database transaction. A partial unique index on `ml_training_runs.lifecycle_status` where the value is `champion` provides database-level protection against multiple active champions.
+
+Lifecycle events are intentionally small. `model_lifecycle_events` stores the event type, affected training run, previous champion reference where relevant, from/to lifecycle status, optional note, and timestamp. It does not model users or approvals because authentication does not exist yet.
+
+Experiment comparison uses persisted validation/test metrics and never reruns evaluation. The comparison API accepts 2 to 4 selected training runs, a metric split, and a primary metric from accuracy, precision, recall, F1, or ROC-AUC. It ranks only directly comparable runs and returns visible warnings when dataset identifiers, split configuration, or text-composition settings differ. Monitoring drift, confidence, and SHAP attribution are not part of model-quality ranking.
+
+The champion is the application's preferred default model for `/analyze`. It is not automatically selected by metric ranking, monitoring status, or recency, and it is not synonymous with universally best. Users can still choose any other completed model for prediction.
 
 ## Transformer Classifier
 

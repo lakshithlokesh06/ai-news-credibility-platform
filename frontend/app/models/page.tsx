@@ -9,6 +9,7 @@ import {
   PaginatedResponse,
   fetchFromApi,
   formatExplanationMethod,
+  formatLifecycleStatus,
   formatModelFamily,
   formatMetric,
   formatModelType,
@@ -61,6 +62,7 @@ export default async function ModelsPage() {
                       <th className="px-3 py-3 font-semibold">Model</th>
                       <th className="px-3 py-3 font-semibold">Family</th>
                       <th className="px-3 py-3 font-semibold">Status</th>
+                      <th className="px-3 py-3 font-semibold">Lifecycle</th>
                       <th className="px-3 py-3 font-semibold">Explainability</th>
                       <th className="px-3 py-3 font-semibold">Dataset size</th>
                       <th className="px-3 py-3 font-semibold">Text mode</th>
@@ -76,12 +78,18 @@ export default async function ModelsPage() {
                       <tr key={model.id}>
                         <td className="px-3 py-4">
                           <p className="font-medium text-ink">{model.model_display_name}</p>
+                          {model.lifecycle_status === "champion" ? (
+                            <span className="mt-2 inline-flex rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+                              Champion
+                            </span>
+                          ) : null}
                           <p className="text-xs text-slate-500">
                             {model.base_model_name ?? formatModelType(model.model_type)}
                           </p>
                         </td>
                         <td className="px-3 py-4 text-slate-700">{formatModelFamily(model.model_family)}</td>
                         <td className="px-3 py-4 text-slate-700">{model.status}</td>
+                        <td className="px-3 py-4 text-slate-700">{formatLifecycleStatus(model.lifecycle_status)}</td>
                         <td className="px-3 py-4 text-slate-700">
                           <p>{model.explainability_supported ? "Supported" : "Not supported"}</p>
                           <p className="text-xs text-slate-500">{formatExplanationMethod(model.explanation_method)}</p>
@@ -96,13 +104,21 @@ export default async function ModelsPage() {
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.roc_auc)}</td>
                         <td className="px-3 py-4">
                           {model.status === "completed" ? (
-                            <Link
-                              href={`/monitoring/${model.id}`}
-                              className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-ink"
-                            >
-                              <Activity aria-hidden="true" className="h-4 w-4" />
-                              View
-                            </Link>
+                            <div className="flex flex-wrap gap-2">
+                              <Link
+                                href={`/monitoring/${model.id}`}
+                                className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-ink"
+                              >
+                                <Activity aria-hidden="true" className="h-4 w-4" />
+                                View
+                              </Link>
+                              <Link
+                                href={`/experiments/${model.id}`}
+                                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-ink"
+                              >
+                                Experiment
+                              </Link>
+                            </div>
                           ) : (
                             <span className="text-xs text-slate-500">Available after completion</span>
                           )}

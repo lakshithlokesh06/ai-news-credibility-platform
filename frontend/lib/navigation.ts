@@ -4,6 +4,7 @@ export const navigationItems = [
   { href: "/analyze", label: "Analyze" },
   { href: "/history", label: "History" },
   { href: "/models", label: "Models" },
+  { href: "/experiments", label: "Experiments" },
   { href: "/evaluation", label: "Evaluation" },
   { href: "/monitoring", label: "Monitoring" },
   { href: "/about", label: "About" },

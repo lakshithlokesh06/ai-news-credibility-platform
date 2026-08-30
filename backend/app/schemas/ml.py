@@ -1,10 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.article import ArticleLabel
-from app.models.training import ClassicalModelType, ModelFamily, TrainingRunStatus
+from app.models.training import ClassicalModelType, ModelFamily, ModelLifecycleStatus, TrainingRunStatus
 from app.schemas.preprocessing import PreprocessingConfig, TextCompositionConfig
 
 
@@ -62,6 +62,8 @@ class TransformerConfig(BaseModel):
 class TrainingRunCreate(BaseModel):
     model_type: ClassicalModelType
     model_display_name: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    tags: list[str] = Field(default_factory=list, max_length=20)
     dataset_names: list[str] | None = Field(default=None, max_length=20)
     text_composition: TextCompositionConfig = Field(default_factory=TextCompositionConfig)
     preprocessing: PreprocessingConfig = Field(default_factory=PreprocessingConfig)
@@ -70,6 +72,23 @@ class TrainingRunCreate(BaseModel):
     split: SplitConfig = Field(default_factory=SplitConfig)
     hyperparameters: ModelHyperparameters = Field(default_factory=ModelHyperparameters)
     random_seed: int = Field(default=42, ge=0, le=2_147_483_647)
+
+    @field_validator("tags")
+    @classmethod
+    def normalize_tags(cls, value: list[str]) -> list[str]:
+        normalized = []
+        seen = set()
+        for tag in value:
+            cleaned = tag.strip()
+            if not cleaned:
+                continue
+            if len(cleaned) > 64:
+                raise ValueError("Tags must be 64 characters or fewer.")
+            key = cleaned.lower()
+            if key not in seen:
+                seen.add(key)
+                normalized.append(cleaned)
+        return normalized
 
     @property
     def model_family(self) -> ModelFamily:
@@ -99,9 +118,12 @@ class MLTrainingRunResponse(BaseModel):
     model_type: ClassicalModelType
     base_model_name: str | None
     model_display_name: str
+    description: str | None
+    tags: list[str]
     explainability_supported: bool
     explanation_method: str | None
     status: TrainingRunStatus
+    lifecycle_status: ModelLifecycleStatus | None
     preprocessing_config: dict
     text_composition_config: dict
     tfidf_config: dict
@@ -123,6 +145,8 @@ class MLTrainingRunResponse(BaseModel):
     probability_method: str | None
     device_used: str | None
     training_duration_seconds: float | None
+    environment_versions: dict
+    champion_promoted_at: datetime | None
     error_summary: str | None
     started_at: datetime
     completed_at: datetime | None
@@ -213,6 +237,13 @@ class ModelComparisonItem(BaseModel):
     test_metrics: dict | None
     primary_metric_name: str
     primary_metric_value: float | None
+    lifecycle_status: str | None = None
+    is_champion: bool = False
+    dataset_identifiers: list[str] = Field(default_factory=list)
+    text_composition_mode: str | None = None
+    rank: int | None = None
+    comparability_status: str = "directly_comparable"
+    comparability_warnings: list[str] = Field(default_factory=list)
 
 
 class ModelComparisonResponse(BaseModel):
@@ -221,3 +252,5 @@ class ModelComparisonResponse(BaseModel):
     items: list[ModelComparisonItem]
     recommended_training_run_id: UUID | None
     recommendation_note: str | None
+    comparability_status: str = "directly_comparable"
+    comparability_warnings: list[str] = Field(default_factory=list)

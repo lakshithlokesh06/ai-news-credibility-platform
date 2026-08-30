@@ -17,10 +17,11 @@ import {
 
 type AnalyzeClientProps = {
   models: MLTrainingRun[];
+  championId: string | null;
 };
 
-export function AnalyzeClient({ models }: AnalyzeClientProps) {
-  const [selectedModel, setSelectedModel] = useState(models[0]?.id ?? "");
+export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
+  const [selectedModel, setSelectedModel] = useState(championId ?? models[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
@@ -133,7 +134,7 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
               {models.length ? (
                 models.map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.model_display_name}
+                    {model.lifecycle_status === "champion" ? `${model.model_display_name} (Champion)` : model.model_display_name}
                   </option>
                 ))
               ) : (
@@ -175,10 +176,21 @@ export function AnalyzeClient({ models }: AnalyzeClientProps) {
       <aside className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-ink">Inference result</h2>
         {selectedModelRecord ? (
-          <p className="mt-3 text-sm text-slate-500">
-            Selected: {formatModelFamily(selectedModelRecord.model_family)} /{" "}
-            {selectedModelRecord.base_model_name ?? formatModelType(selectedModelRecord.model_type)}
-          </p>
+          <div className="mt-3 grid gap-2 text-sm text-slate-500">
+            <p>
+              Selected: {formatModelFamily(selectedModelRecord.model_family)} /{" "}
+              {selectedModelRecord.base_model_name ?? formatModelType(selectedModelRecord.model_type)}
+            </p>
+            {selectedModelRecord.lifecycle_status === "champion" ? (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-800">
+                This is the current champion/default model.
+              </p>
+            ) : championId ? (
+              <p className="rounded-md bg-slate-50 px-3 py-2 text-slate-600">
+                You selected a completed model other than the current champion.
+              </p>
+            ) : null}
+          </div>
         ) : null}
         {error ? (
           <p className="mt-5 rounded-md bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">{error}</p>

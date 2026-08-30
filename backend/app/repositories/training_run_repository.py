@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.training import MLTrainingRun, TrainingRunStatus
+from app.models.training import ClassicalModelType, MLTrainingRun, ModelFamily, ModelLifecycleStatus, TrainingRunStatus
 
 
 class TrainingRunRepository:
@@ -21,6 +21,12 @@ class TrainingRunRepository:
         self,
         *,
         status: TrainingRunStatus | None = None,
+        model_family: ModelFamily | None = None,
+        model_type: ClassicalModelType | None = None,
+        lifecycle_status: ModelLifecycleStatus | None = None,
+        champion: bool | None = None,
+        trained_after=None,
+        trained_before=None,
         limit: int = 25,
         offset: int = 0,
     ) -> tuple[list[MLTrainingRun], int]:
@@ -29,6 +35,27 @@ class TrainingRunRepository:
         if status is not None:
             statement = statement.where(MLTrainingRun.status == status.value)
             count_statement = count_statement.where(MLTrainingRun.status == status.value)
+        if model_family is not None:
+            statement = statement.where(MLTrainingRun.model_family == model_family.value)
+            count_statement = count_statement.where(MLTrainingRun.model_family == model_family.value)
+        if model_type is not None:
+            statement = statement.where(MLTrainingRun.model_type == model_type.value)
+            count_statement = count_statement.where(MLTrainingRun.model_type == model_type.value)
+        if lifecycle_status is not None:
+            statement = statement.where(MLTrainingRun.lifecycle_status == lifecycle_status.value)
+            count_statement = count_statement.where(MLTrainingRun.lifecycle_status == lifecycle_status.value)
+        if champion is True:
+            statement = statement.where(MLTrainingRun.lifecycle_status == ModelLifecycleStatus.CHAMPION.value)
+            count_statement = count_statement.where(MLTrainingRun.lifecycle_status == ModelLifecycleStatus.CHAMPION.value)
+        elif champion is False:
+            statement = statement.where(MLTrainingRun.lifecycle_status != ModelLifecycleStatus.CHAMPION.value)
+            count_statement = count_statement.where(MLTrainingRun.lifecycle_status != ModelLifecycleStatus.CHAMPION.value)
+        if trained_after is not None:
+            statement = statement.where(MLTrainingRun.completed_at >= trained_after)
+            count_statement = count_statement.where(MLTrainingRun.completed_at >= trained_after)
+        if trained_before is not None:
+            statement = statement.where(MLTrainingRun.completed_at <= trained_before)
+            count_statement = count_statement.where(MLTrainingRun.completed_at <= trained_before)
 
         total = self.db.execute(count_statement).scalar_one()
         items = self.db.execute(
@@ -36,3 +63,16 @@ class TrainingRunRepository:
         ).scalars().all()
         return list(items), int(total)
 
+    def get_champion(self) -> MLTrainingRun | None:
+        return self.db.execute(
+            select(MLTrainingRun).where(MLTrainingRun.lifecycle_status == ModelLifecycleStatus.CHAMPION.value)
+        ).scalars().first()
+
+    def list_by_ids(self, training_run_ids: list[UUID]) -> list[MLTrainingRun]:
+        if not training_run_ids:
+            return []
+        return list(
+            self.db.execute(
+                select(MLTrainingRun).where(MLTrainingRun.id.in_(training_run_ids))
+            ).scalars().all()
+        )

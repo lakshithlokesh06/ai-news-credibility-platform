@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Index, JSON, String, Text
+from sqlalchemy import CheckConstraint, DateTime, Index, JSON, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
 
@@ -27,6 +27,12 @@ class TrainingRunStatus(StrEnum):
     FAILED = "failed"
 
 
+class ModelLifecycleStatus(StrEnum):
+    CANDIDATE = "candidate"
+    CHAMPION = "champion"
+    ARCHIVED = "archived"
+
+
 class MLTrainingRun(Base):
     __tablename__ = "ml_training_runs"
 
@@ -35,7 +41,10 @@ class MLTrainingRun(Base):
     model_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     base_model_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     model_display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    lifecycle_status: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     preprocessing_config: Mapped[dict] = mapped_column(JSON, nullable=False)
     text_composition_config: Mapped[dict] = mapped_column(JSON, nullable=False)
     tfidf_config: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -57,15 +66,28 @@ class MLTrainingRun(Base):
     probability_method: Mapped[str | None] = mapped_column(String(128), nullable=True)
     device_used: Mapped[str | None] = mapped_column(String(64), nullable=True)
     training_duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
+    environment_versions: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    champion_promoted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
+        CheckConstraint(
+            "lifecycle_status IS NULL OR lifecycle_status IN ('candidate', 'champion', 'archived')",
+            name="ck_ml_training_runs_lifecycle_status",
+        ),
         Index("ix_ml_training_runs_status_started", "status", "started_at"),
         Index("ix_ml_training_runs_family_status", "model_family", "status"),
         Index("ix_ml_training_runs_model_status", "model_type", "status"),
+        Index(
+            "uq_ml_training_runs_one_champion",
+            "lifecycle_status",
+            unique=True,
+            postgresql_where=text("lifecycle_status = 'champion'"),
+            sqlite_where=text("lifecycle_status = 'champion'"),
+        ),
     )
 
     @property

@@ -2,8 +2,9 @@
 
 from app.models.analysis import AnalysisRecord, ExplanationStatus
 from app.models.article import ArticleLabel, DatasetImportRun, ImportStatus, NewsArticle
+from app.models.lifecycle import ModelLifecycleEvent, ModelLifecycleEventType
 from app.models.monitoring import ModelMonitoringProfile, MonitoringProfileStatus
-from app.models.training import ClassicalModelType, MLTrainingRun, ModelFamily, TrainingRunStatus
+from app.models.training import ClassicalModelType, MLTrainingRun, ModelFamily, ModelLifecycleStatus, TrainingRunStatus
 
 __all__ = [
     "ArticleLabel",
@@ -13,6 +14,9 @@ __all__ = [
     "ExplanationStatus",
     "ImportStatus",
     "MLTrainingRun",
+    "ModelLifecycleEvent",
+    "ModelLifecycleEventType",
+    "ModelLifecycleStatus",
     "ModelMonitoringProfile",
     "ModelFamily",
     "MonitoringProfileStatus",

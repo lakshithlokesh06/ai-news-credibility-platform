@@ -1,6 +1,7 @@
 from app.db.base import Base
 from app.models.analysis import AnalysisRecord
 from app.models.article import DatasetImportRun, NewsArticle
+from app.models.lifecycle import ModelLifecycleEvent
 from app.models.monitoring import ModelMonitoringProfile
 from app.models.training import MLTrainingRun
 
@@ -9,6 +10,7 @@ __all__ = [
     "Base",
     "DatasetImportRun",
     "MLTrainingRun",
+    "ModelLifecycleEvent",
     "ModelMonitoringProfile",
     "NewsArticle",
 ]

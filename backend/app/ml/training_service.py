@@ -1,11 +1,13 @@
 from collections import Counter
 from datetime import UTC, datetime
+from importlib import metadata
 from pathlib import Path
+import sys
 from time import perf_counter
 
 from sqlalchemy.orm import Session
 
-from app.models.training import ClassicalModelType, MLTrainingRun, ModelFamily, TrainingRunStatus
+from app.models.training import ClassicalModelType, MLTrainingRun, ModelFamily, ModelLifecycleStatus, TrainingRunStatus
 from app.ml.artifacts import ARTIFACT_VERSION, ArtifactStore
 from app.ml.dataset import TrainingDatasetBuilder, TrainingDatasetError
 from app.ml.evaluation import evaluate_classifier
@@ -34,7 +36,10 @@ class TrainingService:
             model_type=config.model_type.value,
             base_model_name=config.transformer.model_name if model_family == ModelFamily.TRANSFORMER else None,
             model_display_name=display_name,
+            description=config.description,
+            tags=config.tags,
             status=TrainingRunStatus.TRAINING.value,
+            lifecycle_status=None,
             preprocessing_config=config.preprocessing.model_dump(),
             text_composition_config=config.text_composition.model_dump(),
             tfidf_config=config.tfidf.model_dump(),
@@ -42,6 +47,7 @@ class TrainingService:
             model_hyperparameters=config.hyperparameters.model_dump(),
             split_config=config.split.model_dump(),
             random_seed=config.random_seed,
+            environment_versions=_environment_versions(),
             dataset_identifiers=config.dataset_names or [],
             split_distributions={},
             started_at=now,
@@ -56,6 +62,7 @@ class TrainingService:
             if model_family == ModelFamily.TRANSFORMER:
                 TransformerTrainingService(self.db, self.artifact_store.base_dir).train(training_run, config)
                 training_run.status = TrainingRunStatus.COMPLETED.value
+                training_run.lifecycle_status = ModelLifecycleStatus.CANDIDATE.value
                 training_run.training_duration_seconds = training_run.training_duration_seconds or round(perf_counter() - started, 6)
                 training_run.completed_at = datetime.now(UTC)
                 self._generate_monitoring_profile(training_run)
@@ -103,6 +110,7 @@ class TrainingService:
             )
 
             training_run.status = TrainingRunStatus.COMPLETED.value
+            training_run.lifecycle_status = ModelLifecycleStatus.CANDIDATE.value
             training_run.train_count = len(split.train_labels)
             training_run.validation_count = len(split.validation_labels)
             training_run.test_count = len(split.test_labels)
@@ -130,6 +138,7 @@ class TrainingService:
             failed_run = self.repository.get(training_run.id)
             if failed_run is not None:
                 failed_run.status = TrainingRunStatus.FAILED.value
+                failed_run.lifecycle_status = None
                 failed_run.error_summary = str(exc)
                 failed_run.completed_at = datetime.now(UTC)
                 self.db.commit()
@@ -156,3 +165,14 @@ class TrainingService:
         except (MonitoringError, TrainingDatasetError):
             # Monitoring profiles can be explicitly backfilled later; training artifacts remain valid.
             return
+
+
+def _environment_versions() -> dict[str, str]:
+    packages = ["fastapi", "pydantic", "sqlalchemy", "numpy", "scikit-learn"]
+    versions = {"python": sys.version.split()[0]}
+    for package in packages:
+        try:
+            versions[package] = metadata.version(package)
+        except metadata.PackageNotFoundError:
+            continue
+    return versions
