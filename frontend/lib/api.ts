@@ -60,6 +60,9 @@ export type SupportedModelType = ClassicalModelType | "distilbert";
 export type ModelFamily = "classical" | "transformer";
 export type TrainingRunStatus = "pending" | "training" | "completed" | "failed";
 export type ModelLifecycleStatus = "candidate" | "champion" | "archived";
+export type ReviewState = "unreviewed" | "reviewed";
+export type ReviewFilter = "all" | "unreviewed" | "reviewed" | "correct" | "incorrect";
+export type ConfidenceBucket = "all" | "high" | "low";
 
 export type MLTrainingRun = {
   id: string;
@@ -204,6 +207,7 @@ export type AnalysisHistorySummary = {
   confidence: number | null;
   explanation_available: boolean;
   explanation_method: string | null;
+  review: AnalysisReviewInfo;
   created_at: string;
   updated_at: string;
 };
@@ -235,8 +239,150 @@ export type AnalysisHistoryDetail = {
   probability_method: string | null;
   explanation_status: string;
   explanation: AnalysisExplanationDetail | null;
+  review: AnalysisReviewInfo;
   created_at: string;
   updated_at: string;
+};
+
+export type AnalysisReviewInfo = {
+  status: ReviewState;
+  review_id: string | null;
+  verified_label: ArticleLabel | null;
+  is_prediction_correct: boolean | null;
+  reviewer_note: string | null;
+  evidence_note: string | null;
+  reviewed_at: string | null;
+  updated_at: string | null;
+};
+
+export type ReviewQueueItem = {
+  id: string;
+  training_run_id: string | null;
+  model_family: ModelFamily;
+  model_type: SupportedModelType;
+  model_name: string | null;
+  model_display_name: string;
+  title: string | null;
+  article_preview: string | null;
+  predicted_label: ArticleLabel;
+  confidence: number | null;
+  explanation_available: boolean;
+  review: AnalysisReviewInfo;
+  created_at: string;
+};
+
+export type TrainingRunReviewSummary = {
+  training_run_id: string | null;
+  model_display_name: string;
+  model_family: ModelFamily | null;
+  model_type: SupportedModelType | null;
+  lifecycle_status: ModelLifecycleStatus | null;
+  analysis_count: number;
+  reviewed_count: number;
+  correct_count: number;
+  incorrect_count: number;
+  review_coverage_percentage: number | null;
+  is_champion: boolean;
+};
+
+export type ReviewStatistics = {
+  total_analyses: number;
+  reviewed_analyses: number;
+  unreviewed_analyses: number;
+  review_coverage_percentage: number | null;
+  reviewed_real_count: number;
+  reviewed_fake_count: number;
+  correct_prediction_count: number;
+  incorrect_prediction_count: number;
+  per_training_run: TrainingRunReviewSummary[];
+  interpretation: string;
+};
+
+export type ConfusionMatrix = {
+  labels: ArticleLabel[];
+  matrix: number[][];
+  true_real_pred_real: number;
+  true_real_pred_fake: number;
+  true_fake_pred_real: number;
+  true_fake_pred_fake: number;
+  positive_class: ArticleLabel;
+};
+
+export type ProductionPerformance = {
+  scope: "training_run" | "mixed_model_aggregate";
+  training_run_id: string | null;
+  model_display_name: string;
+  model_family: ModelFamily | null;
+  model_type: SupportedModelType | null;
+  reviewed_count: number;
+  correct_count: number;
+  incorrect_count: number;
+  accuracy: number | null;
+  precision: number | null;
+  recall: number | null;
+  f1: number | null;
+  roc_auc: { value: number | null; available: boolean; reason: string | null };
+  confusion_matrix: ConfusionMatrix;
+  minimum_reviewed_samples: number;
+  sufficiency_status: "insufficient_data" | "preliminary" | "sufficient";
+  positive_class: ArticleLabel;
+  held_out_test_metrics: MetricSet | null;
+  limitations: string[];
+};
+
+export type ReliabilityBin = {
+  lower_bound: number;
+  upper_bound: number;
+  sample_count: number;
+  mean_confidence: number;
+  observed_accuracy: number;
+};
+
+export type CalibrationDiagnostics = {
+  scope: "training_run" | "mixed_model_aggregate";
+  training_run_id: string | null;
+  model_display_name: string;
+  sample_count: number;
+  bin_count: number;
+  brier_score: number | null;
+  expected_calibration_error: number | null;
+  reliability_bins: ReliabilityBin[];
+  minimum_reviewed_samples: number;
+  sufficiency_status: "insufficient_data" | "preliminary" | "sufficient";
+  limitations: string[];
+};
+
+export type ErrorAnalysisItem = {
+  analysis_id: string;
+  training_run_id: string | null;
+  model_display_name: string;
+  title: string | null;
+  article_preview: string | null;
+  predicted_label: ArticleLabel;
+  verified_label: ArticleLabel;
+  confidence: number | null;
+  error_type: "false_positive" | "false_negative" | "correct_real" | "correct_fake";
+  explanation_available: boolean;
+  created_at: string;
+  reviewed_at: string;
+};
+
+export type ErrorAnalysis = {
+  items: ErrorAnalysisItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  statistics: {
+    average_confidence_correct: number | null;
+    average_confidence_incorrect: number | null;
+    high_confidence_error_count: number;
+    high_confidence_error_rate: number | null;
+    low_confidence_error_count: number;
+    low_confidence_error_rate: number | null;
+    high_confidence_threshold: number;
+    low_confidence_threshold: number;
+  };
+  definitions: Record<string, string>;
 };
 
 export type HistoryDistributionItem = {
@@ -558,6 +704,26 @@ export function formatLifecycleStatus(status: ModelLifecycleStatus | null | unde
     archived: "Archived",
   };
   return labels[status];
+}
+
+export function formatReviewStatus(review: AnalysisReviewInfo | null | undefined) {
+  if (!review || review.status === "unreviewed") {
+    return "Unreviewed";
+  }
+  if (review.is_prediction_correct === true) {
+    return "Correct prediction";
+  }
+  if (review.is_prediction_correct === false) {
+    return "Incorrect prediction";
+  }
+  return "Reviewed";
+}
+
+export function formatReviewedLabel(label: ArticleLabel | null | undefined) {
+  if (!label) {
+    return "No human-verified label";
+  }
+  return label === "FAKE" ? "Human-verified FAKE" : "Human-verified REAL";
 }
 
 export function formatExplanationMethod(method: string | null | undefined) {

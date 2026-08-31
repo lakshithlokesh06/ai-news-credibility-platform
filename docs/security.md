@@ -16,6 +16,8 @@ Article title, article content, combined article input, dataset import size, mon
 
 Oversized article inputs are rejected with validation errors. Validation responses do not echo raw article bodies.
 
+Human review notes are bounded plain-text fields. The frontend renders them as text, not raw HTML.
+
 ## Observability
 
 The backend returns an `X-Request-ID` header for every request, accepts bounded incoming request IDs, and logs method, path, status, duration, and request ID. Request logs do not include query strings or bodies.
@@ -36,7 +38,9 @@ A strict Content Security Policy is not added yet because it requires coordinate
 
 ## Data Privacy
 
-Saved analysis content resides in PostgreSQL. History detail endpoints return saved article content; history summaries and monitoring endpoints avoid full article bodies. Monitoring remains aggregate-only.
+Saved analysis content resides in PostgreSQL. History detail endpoints return saved article content; history summaries, review queue responses, reviewed-performance APIs, calibration APIs, error-analysis APIs, and monitoring endpoints avoid full article bodies. Monitoring remains aggregate-only.
+
+Human-verified labels must be explicitly entered. They are not inferred from predictions, confidence, explanations, source metadata, training labels, web results, or external APIs. Review notes are not returned by aggregate metrics endpoints.
 
 ## Deployment Limitations
 

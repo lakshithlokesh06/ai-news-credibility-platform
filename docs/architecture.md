@@ -8,7 +8,7 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, experiment tracking, champion model selection, lifecycle management, explicit model explainability, persisted analysis history, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, experiment tracking, champion model selection, lifecycle management, explicit model explainability, persisted analysis history, human review, reviewed-production metrics, calibration diagnostics, error analysis, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
@@ -76,6 +76,16 @@ Completed Training Run
 -> Monitoring UI
 ```
 
+The current reviewed-production evaluation pipeline is:
+
+```text
+Saved Analysis
+-> Explicit Human Review
+-> Verified Label
+-> Scoped Production-Style Metrics
+-> Calibration / Error Analysis
+```
+
 The current experiment lifecycle pipeline is:
 
 ```text
@@ -98,6 +108,7 @@ The Next.js frontend provides the user-facing shell for the future analysis plat
 - Experiment tracking pages for run metadata, comparison, champion selection, archive/restore actions, and lifecycle history
 - Evaluation dashboard backed by stored validation/test metrics across model families
 - Monitoring overview and per-model diagnostic pages backed by saved analysis history
+- Human review queue and reviewed-production performance dashboard backed by explicit verified labels
 - About page documenting scope and constraints
 
 The frontend communicates with the backend through a configurable API base URL.
@@ -117,6 +128,7 @@ The FastAPI backend is organized by responsibility:
 - `ml/` contains dataset preparation, stratified splitting, TF-IDF feature extraction, classical trainers, transformer dataset/tokenization/device/artifact helpers, evaluation, inference, and comparison helpers
 - `explainability/` contains explanation configuration, classical attribution, transformer SHAP attribution, SHAP adapters, token aggregation, normalization, and orchestration services
 - `monitoring/` contains reference-profile generation, current-window aggregation, drift metrics, status rules, and monitoring orchestration
+- `review/` contains human-review persistence access, review updates, reviewed-production metrics, calibration diagnostics, and error analysis
 - `services/experiments.py` contains experiment summaries, comparability checks, champion validation, lifecycle actions, and pairwise comparison orchestration
 - `utils/` contains shared implementation utilities
 
@@ -136,6 +148,7 @@ Current persistence tables:
 - `ml_training_runs`: auditable training-run records with model type, model family, base model name, display metadata, execution status, lifecycle status, preprocessing configuration, text composition configuration, TF-IDF configuration, transformer configuration, selected device, training duration, hyperparameters, split counts, dataset identifiers, validation/test metrics, artifact metadata, champion timestamp, compact environment versions, and failure information
 - `model_lifecycle_events`: compact lifecycle audit events for promotion, demotion, archive, and restore actions
 - `analysis_records`: saved local analysis records with model metadata, submitted title/content, prediction probabilities, explanation status, normalized explanation JSON, and timestamps
+- `analysis_reviews`: one current human review per saved analysis, with canonical verified label, simple review status, optional plain-text notes, and timestamps
 - `model_monitoring_profiles`: per-training-run reference profiles with profile version, status, sample count, reference distributions/statistics, feature metadata, and timestamps
 
 No authentication or user-ownership tables have been introduced yet. The current installation is treated as a single-user/local application.
@@ -257,6 +270,24 @@ History APIs:
 - `DELETE /api/v1/history/{analysis_id}`: deletes only the saved analysis record
 
 History list and statistics responses avoid returning full article bodies. The detail endpoint returns full content so users can review the original saved analysis. Opening a history detail does not load model artifacts, rerun inference, or rerun SHAP.
+
+## Human Review And Error Analysis
+
+Human review is intentionally separated from prediction. The `analysis_reviews` table stores one current review for an `analysis_record`; absence of a row means the analysis is unreviewed. A review stores only a canonical human-verified `REAL` or `FAKE` label, a simple `reviewed` status, optional plain-text reviewer/evidence notes, and timestamps. The original model prediction remains on `analysis_records` and is never overwritten by review updates.
+
+Review APIs:
+
+- `PUT /api/v1/history/{analysis_id}/review`: creates or updates the current human review for a saved analysis
+- `DELETE /api/v1/history/{analysis_id}/review`: removes only the review, retaining prediction, explanation, and history content
+- `GET /api/v1/reviews/queue`: returns concise review queue items without full article bodies
+- `GET /api/v1/reviews/statistics`: reports review coverage, reviewed label counts, correct/incorrect counts, and per-training-run availability
+- `GET /api/v1/reviews/performance`: reports reviewed-production accuracy, precision, recall, F1, ROC-AUC availability, confusion matrix, sample sufficiency, and held-out test metrics separately
+- `GET /api/v1/reviews/calibration`: reports reviewed-label Brier score, expected calibration error, and non-empty reliability bins
+- `GET /api/v1/reviews/errors`: reports false positives, false negatives, correct REAL predictions, correct FAKE predictions, confidence statistics, and concise linked examples
+
+For reviewed-production metrics, `FAKE` is the positive class. A false positive means the model predicted `FAKE` while the human-verified label is `REAL`; a false negative means the model predicted `REAL` while the human-verified label is `FAKE`.
+
+Review metrics derive only from persisted predictions, probabilities, and explicit human-verified labels. They do not load ML artifacts, run inference, run SHAP, fetch external evidence, generate labels, retrain models, or alter champion state. Aggregate review and performance endpoints return previews and metric summaries, not full article bodies or review-note dumps.
 
 Dataset statistics, evaluation metrics, and history analytics are different concepts. Dataset statistics describe imported labeled training data. Evaluation metrics describe held-out model performance. History analytics describe aggregate characteristics of articles users analyzed and saved locally.
 

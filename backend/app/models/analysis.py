@@ -54,6 +54,11 @@ class AnalysisRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     training_run: Mapped[MLTrainingRun | None] = relationship()
+    review: Mapped["AnalysisReview | None"] = relationship(
+        back_populates="analysis",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
     __table_args__ = (
         CheckConstraint("predicted_label IN ('REAL', 'FAKE')", name="ck_analysis_records_predicted_label"),

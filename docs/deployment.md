@@ -23,6 +23,10 @@ Important variables:
 - `MAX_DATASET_FILE_BYTES`
 - `TRAINING_CONCURRENCY_LIMIT`, `EXPLANATION_CONCURRENCY_LIMIT`
 - `RATE_LIMIT_WINDOW_SECONDS` plus per-operation rate limit variables
+- `REVIEW_NOTE_MAX_CHARS`, `REVIEW_EVIDENCE_NOTE_MAX_CHARS`
+- `PERFORMANCE_MIN_REVIEWED_SAMPLES`
+- `CALIBRATION_DEFAULT_BINS`
+- `HIGH_CONFIDENCE_ERROR_THRESHOLD`
 
 ## Frontend Configuration
 
@@ -87,6 +91,12 @@ docker compose run --rm migrate
 - `/api/v1/system/metrics`: safe in-process request counters
 
 Readiness does not load ML models.
+
+## Reviewed Production Metrics
+
+Reviewed-production metrics require saved analyses with explicit human-verified labels. Below `PERFORMANCE_MIN_REVIEWED_SAMPLES`, metrics are available but marked preliminary. ROC-AUC is unavailable unless reviewed labels contain both classes and usable probabilities exist.
+
+These endpoints do not run inference, SHAP, or training. They derive metrics from persisted predictions, probabilities, and human-entered labels only.
 
 ## Persistence
 

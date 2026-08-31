@@ -7,6 +7,7 @@ import { RefreshMonitoringProfileButton } from "@/components/RefreshMonitoringPr
 import {
   ModelMonitoring,
   MonitoringMetric,
+  ReviewStatistics,
   fetchFromApi,
   formatMetric,
   formatModelFamily,
@@ -23,7 +24,11 @@ type MonitoringDetailPageProps = {
 
 async function loadMonitoring(trainingRunId: string) {
   try {
-    return await fetchFromApi<ModelMonitoring>(`/api/v1/monitoring/models/${trainingRunId}`);
+    const [monitoring, reviewStatistics] = await Promise.all([
+      fetchFromApi<ModelMonitoring>(`/api/v1/monitoring/models/${trainingRunId}`),
+      fetchFromApi<ReviewStatistics>("/api/v1/reviews/statistics"),
+    ]);
+    return { monitoring, reviewStatistics };
   } catch {
     return null;
   }
@@ -31,9 +36,9 @@ async function loadMonitoring(trainingRunId: string) {
 
 export default async function MonitoringDetailPage({ params }: MonitoringDetailPageProps) {
   const { trainingRunId } = await params;
-  const monitoring = await loadMonitoring(trainingRunId);
+  const data = await loadMonitoring(trainingRunId);
 
-  if (!monitoring) {
+  if (!data) {
     return (
       <>
         <PageHeader
@@ -52,6 +57,9 @@ export default async function MonitoringDetailPage({ params }: MonitoringDetailP
     );
   }
 
+  const monitoring = data.monitoring;
+  const reviewedCount =
+    data.reviewStatistics.per_training_run.find((item) => item.training_run_id === monitoring.training_run_id)?.reviewed_count ?? 0;
   const referenceStats = monitoring.reference_profile?.reference_statistics ?? {};
   const textLengthStats = asRecord(referenceStats.text_length);
   const titleLengthStats = asRecord(referenceStats.title_length);
@@ -110,6 +118,15 @@ export default async function MonitoringDetailPage({ params }: MonitoringDetailP
           <div className="mt-6 border-t border-slate-200 pt-5">
             <RefreshMonitoringProfileButton trainingRunId={monitoring.training_run_id} />
           </div>
+          {reviewedCount > 0 ? (
+            <div className="mt-5 rounded-md bg-teal-50 px-4 py-3 text-sm leading-6 text-teal-900">
+              <p className="font-semibold">Reviewed production performance available</p>
+              <p>{reviewedCount} human-reviewed samples.</p>
+              <Link href={`/performance?training_run_id=${monitoring.training_run_id}`} className="font-semibold text-ink">
+                View performance
+              </Link>
+            </div>
+          ) : null}
         </aside>
 
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">

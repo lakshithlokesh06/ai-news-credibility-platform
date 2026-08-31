@@ -2,10 +2,11 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.analysis import AnalysisRecord, ExplanationStatus
 from app.models.article import ArticleLabel
+from app.models.review import AnalysisReview
 from app.models.training import ClassicalModelType, ModelFamily
 
 
@@ -34,11 +35,15 @@ class AnalysisRepository:
         created_after: datetime | None = None,
         created_before: datetime | None = None,
         search: str | None = None,
+        review_filter: str | None = None,
         limit: int = 25,
         offset: int = 0,
     ) -> tuple[list[AnalysisRecord], int]:
-        statement = select(AnalysisRecord)
+        statement = select(AnalysisRecord).options(selectinload(AnalysisRecord.review))
         count_statement = select(func.count()).select_from(AnalysisRecord)
+        if review_filter:
+            statement = statement.outerjoin(AnalysisReview)
+            count_statement = count_statement.outerjoin(AnalysisReview)
         filters = []
         if predicted_label is not None:
             filters.append(AnalysisRecord.predicted_label == predicted_label.value)
@@ -64,6 +69,16 @@ class AnalysisRepository:
                     AnalysisRecord.content.ilike(search_pattern),
                 )
             )
+        if review_filter == "reviewed":
+            filters.append(AnalysisReview.id.is_not(None))
+        elif review_filter == "unreviewed":
+            filters.append(AnalysisReview.id.is_(None))
+        elif review_filter == "correct":
+            filters.append(AnalysisReview.id.is_not(None))
+            filters.append(AnalysisRecord.predicted_label == AnalysisReview.verified_label)
+        elif review_filter == "incorrect":
+            filters.append(AnalysisReview.id.is_not(None))
+            filters.append(AnalysisRecord.predicted_label != AnalysisReview.verified_label)
 
         for expression in filters:
             statement = statement.where(expression)
@@ -77,5 +92,9 @@ class AnalysisRepository:
 
     def all_for_statistics(self) -> list[AnalysisRecord]:
         return list(
-            self.db.execute(select(AnalysisRecord).order_by(AnalysisRecord.created_at.asc())).scalars().all()
+            self.db.execute(
+                select(AnalysisRecord)
+                .options(selectinload(AnalysisRecord.review))
+                .order_by(AnalysisRecord.created_at.asc())
+            ).scalars().all()
         )

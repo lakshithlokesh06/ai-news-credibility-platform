@@ -7,6 +7,7 @@ import { TrainingAction } from "@/components/TrainingAction";
 import {
   MLTrainingRun,
   PaginatedResponse,
+  ReviewStatistics,
   fetchFromApi,
   formatExplanationMethod,
   formatLifecycleStatus,
@@ -19,7 +20,11 @@ export const dynamic = "force-dynamic";
 
 async function loadTrainingRuns() {
   try {
-    return await fetchFromApi<PaginatedResponse<MLTrainingRun>>("/api/v1/ml/training-runs?limit=50&offset=0");
+    const [trainingRuns, reviewStatistics] = await Promise.all([
+      fetchFromApi<PaginatedResponse<MLTrainingRun>>("/api/v1/ml/training-runs?limit=50&offset=0"),
+      fetchFromApi<ReviewStatistics>("/api/v1/reviews/statistics"),
+    ]);
+    return { trainingRuns, reviewStatistics };
   } catch {
     return null;
   }
@@ -27,7 +32,10 @@ async function loadTrainingRuns() {
 
 export default async function ModelsPage() {
   const trainingRuns = await loadTrainingRuns();
-  const models = trainingRuns?.items ?? [];
+  const models = trainingRuns?.trainingRuns.items ?? [];
+  const reviewCounts = new Map(
+    (trainingRuns?.reviewStatistics.per_training_run ?? []).map((item) => [item.training_run_id, item.reviewed_count])
+  );
 
   return (
     <>
@@ -70,6 +78,7 @@ export default async function ModelsPage() {
                       <th className="px-3 py-3 font-semibold">Test F1</th>
                       <th className="px-3 py-3 font-semibold">Accuracy</th>
                       <th className="px-3 py-3 font-semibold">ROC-AUC</th>
+                      <th className="px-3 py-3 font-semibold">Reviewed</th>
                       <th className="px-3 py-3 font-semibold">Monitoring</th>
                     </tr>
                   </thead>
@@ -102,6 +111,15 @@ export default async function ModelsPage() {
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.f1)}</td>
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.accuracy)}</td>
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.roc_auc)}</td>
+                        <td className="px-3 py-4 text-slate-700">
+                          {model.status === "completed" ? (
+                            <Link href={`/performance?training_run_id=${model.id}`} className="font-semibold text-ink">
+                              {reviewCounts.get(model.id) ?? 0} samples
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-slate-500">N/A</span>
+                          )}
+                        </td>
                         <td className="px-3 py-4">
                           {model.status === "completed" ? (
                             <div className="flex flex-wrap gap-2">

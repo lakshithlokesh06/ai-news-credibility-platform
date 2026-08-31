@@ -19,6 +19,7 @@ from app.schemas.history import (
     TrainingRunHistoryItem,
 )
 from app.schemas.ml import ExplanationRequest, ExplanationResponse, PredictionRequest, PredictionResponse
+from app.schemas.review import AnalysisReviewInfo
 
 
 class HistoryError(ValueError):
@@ -217,6 +218,7 @@ class AnalysisHistoryService:
             confidence=record.confidence,
             explanation_available=record.explanation_status == ExplanationStatus.GENERATED,
             explanation_method=record.explanation_method,
+            review=AnalysisHistoryService._review_info(record, include_notes=False),
             created_at=record.created_at,
             updated_at=record.updated_at,
         )
@@ -251,8 +253,25 @@ class AnalysisHistoryService:
             probability_method=record.probability_method,
             explanation_status=record.explanation_status,
             explanation=explanation,
+            review=AnalysisHistoryService._review_info(record, include_notes=True),
             created_at=record.created_at,
             updated_at=record.updated_at,
+        )
+
+    @staticmethod
+    def _review_info(record: AnalysisRecord, *, include_notes: bool) -> AnalysisReviewInfo:
+        review = record.review
+        if review is None:
+            return AnalysisReviewInfo(status="unreviewed")
+        return AnalysisReviewInfo(
+            status="reviewed",
+            review_id=review.id,
+            verified_label=ArticleLabel(review.verified_label),
+            is_prediction_correct=record.predicted_label == review.verified_label,
+            reviewer_note=review.reviewer_note if include_notes else None,
+            evidence_note=review.evidence_note if include_notes else None,
+            reviewed_at=review.created_at,
+            updated_at=review.updated_at,
         )
 
     @staticmethod

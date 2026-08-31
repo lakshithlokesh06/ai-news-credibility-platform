@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, UserCheck } from "lucide-react";
 
 import { DeleteHistoryButton } from "@/components/DeleteHistoryButton";
 import { EmptyState } from "@/components/EmptyState";
+import { HumanReviewForm } from "@/components/HumanReviewForm";
 import { PageHeader } from "@/components/PageHeader";
 import {
   AnalysisHistoryDetail,
@@ -12,6 +13,8 @@ import {
   formatMetric,
   formatModelFamily,
   formatModelType,
+  formatReviewedLabel,
+  formatReviewStatus,
 } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -99,6 +102,45 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
         </aside>
 
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="flex items-center gap-2">
+            <UserCheck aria-hidden="true" className="h-4 w-4 text-signal" />
+            <h2 className="text-lg font-semibold text-ink">Human Review</h2>
+          </div>
+          <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+            <div className="rounded-lg border border-slate-200 bg-surface p-5">
+              <dl className="grid gap-3 text-sm">
+                <Definition
+                  label="Model prediction"
+                  value={analysis.predicted_label === "FAKE" ? "Likely misinformation" : "Likely credible"}
+                />
+                <Definition label="Human-verified label" value={formatReviewedLabel(analysis.review.verified_label)} />
+                <Definition label="Review status" value={formatReviewStatus(analysis.review)} />
+                <Definition
+                  label="Prediction match"
+                  value={
+                    analysis.review.is_prediction_correct === null
+                      ? "N/A"
+                      : analysis.review.is_prediction_correct
+                        ? "Matched reviewed label"
+                        : "Did not match reviewed label"
+                  }
+                />
+                <Definition
+                  label="Reviewed"
+                  value={analysis.review.reviewed_at ? new Date(analysis.review.reviewed_at).toLocaleString() : "N/A"}
+                />
+              </dl>
+            </div>
+            <HumanReviewForm
+              analysisId={analysis.id}
+              predictedLabel={analysis.predicted_label}
+              review={analysis.review}
+              showNotes
+            />
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
           <h2 className="text-lg font-semibold text-ink">Persisted explanation</h2>
           {analysis.explanation ? (
             <div className="mt-5 grid gap-5">
@@ -128,6 +170,15 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
         </section>
       </div>
     </>
+  );
+}
+
+function Definition({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-slate-500">{label}</dt>
+      <dd className="mt-1 font-semibold text-ink">{value}</dd>
+    </div>
   );
 }
 

@@ -7,12 +7,14 @@ import {
   AnalysisHistorySummary,
   HistoryStatistics,
   PaginatedResponse,
+  ReviewStatistics,
   fetchFromApi,
   formatExplanationMethod,
   formatMetric,
   formatModelFamily,
   formatModelType,
   formatPercentage,
+  formatReviewStatus,
 } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +29,7 @@ function firstValue(value: string | string[] | undefined) {
 
 function buildHistoryQuery(params: Record<string, string | string[] | undefined>) {
   const query = new URLSearchParams();
-  for (const key of ["predicted_label", "model_family", "model_type", "explanation_available", "search"]) {
+  for (const key of ["predicted_label", "model_family", "model_type", "explanation_available", "review_filter", "search"]) {
     const value = firstValue(params[key]);
     if (value && value !== "all") {
       query.set(key, value);
@@ -41,11 +43,12 @@ function buildHistoryQuery(params: Record<string, string | string[] | undefined>
 async function loadHistory(params: Record<string, string | string[] | undefined>) {
   try {
     const query = buildHistoryQuery(params);
-    const [history, statistics] = await Promise.all([
+    const [history, statistics, reviewStatistics] = await Promise.all([
       fetchFromApi<PaginatedResponse<AnalysisHistorySummary>>(`/api/v1/history?${query}`),
       fetchFromApi<HistoryStatistics>("/api/v1/history/statistics"),
+      fetchFromApi<ReviewStatistics>("/api/v1/reviews/statistics"),
     ]);
-    return { history, statistics };
+    return { history, statistics, reviewStatistics };
   } catch {
     return null;
   }
@@ -58,6 +61,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const familyFilter = firstValue(params.model_family) ?? "all";
   const modelTypeFilter = firstValue(params.model_type) ?? "all";
   const explanationFilter = firstValue(params.explanation_available) ?? "all";
+  const reviewFilter = firstValue(params.review_filter) ?? "all";
   const searchFilter = firstValue(params.search) ?? "";
 
   return (
@@ -80,12 +84,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
           />
         ) : (
           <div className="grid gap-6">
-            <HistoryDashboard statistics={data.statistics} />
+            <HistoryDashboard statistics={data.statistics} reviewStatistics={data.reviewStatistics} />
             <HistoryFilters
               predictionFilter={predictionFilter}
               familyFilter={familyFilter}
               modelTypeFilter={modelTypeFilter}
               explanationFilter={explanationFilter}
+              reviewFilter={reviewFilter}
               searchFilter={searchFilter}
             />
             <HistoryList history={data.history} />
@@ -96,7 +101,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   );
 }
 
-function HistoryDashboard({ statistics }: { statistics: HistoryStatistics }) {
+function HistoryDashboard({ statistics, reviewStatistics }: { statistics: HistoryStatistics; reviewStatistics: ReviewStatistics }) {
   return (
     <section className="grid gap-4">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -104,7 +109,7 @@ function HistoryDashboard({ statistics }: { statistics: HistoryStatistics }) {
         <MetricCard label="Likely misinformation" value={String(statistics.likely_fake_count)} helper={formatPercentage(statistics.likely_fake_percentage)} />
         <MetricCard label="Likely credible" value={String(statistics.likely_real_count)} helper={formatPercentage(statistics.likely_real_percentage)} />
         <MetricCard label="Average confidence" value={formatMetric(statistics.average_confidence)} />
-        <MetricCard label="Explanations generated" value={String(statistics.analyses_with_explanations)} />
+        <MetricCard label="Reviewed" value={String(reviewStatistics.reviewed_analyses)} helper={formatPercentage(reviewStatistics.review_coverage_percentage)} />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <DistributionPanel
@@ -187,17 +192,19 @@ function HistoryFilters({
   familyFilter,
   modelTypeFilter,
   explanationFilter,
+  reviewFilter,
   searchFilter,
 }: {
   predictionFilter: string;
   familyFilter: string;
   modelTypeFilter: string;
   explanationFilter: string;
+  reviewFilter: string;
   searchFilter: string;
 }) {
   return (
     <form className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_1fr_1fr]">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_1fr]">
         <label className="grid gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</span>
           <span className="relative">
@@ -214,6 +221,7 @@ function HistoryFilters({
         <FilterSelect label="Model family" name="model_family" value={familyFilter} options={[["all", "All"], ["classical", "Classical"], ["transformer", "Transformer"]]} />
         <FilterSelect label="Model type" name="model_type" value={modelTypeFilter} options={[["all", "All"], ["logistic_regression", "Logistic Regression"], ["linear_svm", "Linear SVM"], ["distilbert", "DistilBERT"]]} />
         <FilterSelect label="Explanation" name="explanation_available" value={explanationFilter} options={[["all", "All"], ["true", "Available"], ["false", "Missing"]]} />
+        <FilterSelect label="Review" name="review_filter" value={reviewFilter} options={[["all", "All"], ["reviewed", "Reviewed"], ["unreviewed", "Unreviewed"], ["correct", "Correct"], ["incorrect", "Incorrect"]]} />
       </div>
       <div className="mt-4 flex flex-wrap gap-3">
         <button type="submit" className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white">Apply filters</button>
@@ -270,6 +278,9 @@ function HistoryList({ history }: { history: PaginatedResponse<AnalysisHistorySu
                 <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
                   {item.explanation_available ? "Explanation saved" : "No explanation"}
                 </span>
+                <span className={reviewBadgeClass(item.review)}>
+                  {formatReviewStatus(item.review)}
+                </span>
               </div>
               <h2 className="mt-3 text-lg font-semibold text-ink">{item.title || "Untitled analysis"}</h2>
               {item.article_preview ? <p className="mt-2 text-sm leading-6 text-slate-600">{item.article_preview}</p> : null}
@@ -291,4 +302,14 @@ function HistoryList({ history }: { history: PaginatedResponse<AnalysisHistorySu
       ))}
     </section>
   );
+}
+
+function reviewBadgeClass(review: AnalysisHistorySummary["review"]) {
+  if (review.status === "unreviewed") {
+    return "rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600";
+  }
+  if (review.is_prediction_correct) {
+    return "rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800";
+  }
+  return "rounded-md bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800";
 }

@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, experiment tracking, explicit champion selection, model lifecycle management, model inference APIs, explainability APIs, persisted analysis history, history analytics, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, experiment tracking, explicit champion selection, model lifecycle management, model inference APIs, explainability APIs, persisted analysis history, human review, reviewed-production performance metrics, calibration diagnostics, error analysis, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
 
 ## Purpose
 
@@ -13,8 +13,8 @@ The system should provide model-based credibility and misinformation predictions
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, experiment/lifecycle services, explainability services, history services, and monitoring services
-- Next.js frontend shell with professional product navigation, live data overview, model registry, experiment tracking, evaluation dashboard, inference workspace, history dashboard, history detail views, and monitoring dashboards
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, experiment/lifecycle services, explainability services, history services, review services, and monitoring services
+- Next.js frontend shell with professional product navigation, live data overview, model registry, experiment tracking, evaluation dashboard, inference workspace, history dashboard, history detail views, review queue, reviewed-production performance dashboard, and monitoring dashboards
 - PostgreSQL development database via Docker Compose
 - Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, explainability, analysis history, analytics, and model comparison
 - Documentation for the current architecture and roadmap
@@ -145,7 +145,14 @@ The backend exposes:
 - `GET /api/v1/history`
 - `GET /api/v1/history/statistics`
 - `GET /api/v1/history/{analysis_id}`
+- `PUT /api/v1/history/{analysis_id}/review`
+- `DELETE /api/v1/history/{analysis_id}/review`
 - `DELETE /api/v1/history/{analysis_id}`
+- `GET /api/v1/reviews/queue`
+- `GET /api/v1/reviews/statistics`
+- `GET /api/v1/reviews/performance`
+- `GET /api/v1/reviews/calibration`
+- `GET /api/v1/reviews/errors`
 - `GET /api/v1/monitoring`
 - `GET /api/v1/monitoring/models/{training_run_id}`
 - `POST /api/v1/monitoring/models/{training_run_id}/reference-profile`
@@ -332,6 +339,19 @@ Statistics are intentionally separated:
 
 A history distribution such as 60% `FAKE` means 60% of saved analyses were classified as likely misinformation by selected models. It does not mean 60% of all news is fake.
 
+## Human Review And Reviewed Production Metrics
+
+Saved analyses can receive one current human review with a canonical `REAL` or `FAKE` verified label plus optional plain-text notes. A review never overwrites the original model prediction, probabilities, explanation, or history content.
+
+Reviewed-production metrics are calculated only from saved analyses with explicit human-verified labels. They are separate from held-out validation/test metrics created during training. The review subsystem reports sample counts, review coverage, accuracy, precision, recall, F1, ROC-AUC when both classes and probabilities are available, a reviewed-analysis confusion matrix, calibration diagnostics, and error-analysis summaries.
+
+For precision, recall, F1, and false-positive/false-negative labels, `FAKE` is treated as the positive class:
+
+- False positive: model predicted `FAKE`, human-verified label is `REAL`
+- False negative: model predicted `REAL`, human-verified label is `FAKE`
+
+Metrics below `PERFORMANCE_MIN_REVIEWED_SAMPLES` are marked preliminary. The platform does not infer labels from confidence, explanation, source, model output, training labels, web results, or external APIs, and it never retrains or changes champion state automatically from review metrics.
+
 ## Model Monitoring
 
 The monitoring flow is:
@@ -442,11 +462,13 @@ npm run build
 - `/data` - dataset overview, latest imports, and article browser
 - `/analyze` - model inference, automatic UI-side history saving, and explicit explanation workspace
 - `/history` - saved analysis dashboard with filters, analytics, and summaries
-- `/history/[analysisId]` - saved analysis detail with persisted prediction/explanation data and deletion
+- `/history/[analysisId]` - saved analysis detail with persisted prediction/explanation data, human review controls, and deletion
+- `/review` - focused queue for assigning human-verified labels to saved analyses
 - `/models` - model registry and training action with model-family awareness
 - `/experiments` - experiment tracking, comparison, and champion overview
 - `/experiments/[trainingRunId]` - experiment detail, configuration, metrics, lifecycle events, and champion/archive actions
 - `/evaluation` - validation/test metrics and model comparison dashboard across model families
+- `/performance` - reviewed-production performance, calibration, and error-analysis dashboard
 - `/monitoring` - model monitoring overview from saved analysis history
 - `/monitoring/[trainingRunId]` - per-model monitoring diagnostics and reference-profile refresh
 - `/about` - project information

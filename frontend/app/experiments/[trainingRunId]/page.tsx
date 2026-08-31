@@ -8,6 +8,7 @@ import {
   ChampionResponse,
   ExperimentDetail,
   MetricSet,
+  ReviewStatistics,
   fetchFromApi,
   formatExplanationMethod,
   formatLifecycleStatus,
@@ -24,11 +25,12 @@ type ExperimentDetailPageProps = {
 
 async function loadExperiment(trainingRunId: string) {
   try {
-    const [experiment, champion] = await Promise.all([
+    const [experiment, champion, reviewStatistics] = await Promise.all([
       fetchFromApi<ExperimentDetail>(`/api/v1/experiments/${trainingRunId}`),
       fetchFromApi<ChampionResponse>("/api/v1/models/champion"),
+      fetchFromApi<ReviewStatistics>("/api/v1/reviews/statistics"),
     ]);
-    return { experiment, champion };
+    return { experiment, champion, reviewStatistics };
   } catch {
     return null;
   }
@@ -58,6 +60,8 @@ export default async function ExperimentDetailPage({ params }: ExperimentDetailP
   }
 
   const experiment = data.experiment;
+  const reviewedCount =
+    data.reviewStatistics.per_training_run.find((item) => item.training_run_id === experiment.training_run_id)?.reviewed_count ?? 0;
 
   return (
     <>
@@ -92,6 +96,7 @@ export default async function ExperimentDetailPage({ params }: ExperimentDetailP
             <Definition label="Duration" value={experiment.training_duration_seconds ? `${experiment.training_duration_seconds.toFixed(2)}s` : "N/A"} />
             <Definition label="Explainability" value={formatExplanationMethod(experiment.explanation_method)} />
             <Definition label="Monitoring" value={experiment.monitoring_available ? "Available" : "No profile yet"} />
+            <Definition label="Reviewed samples" value={String(reviewedCount)} />
             <Definition label="Trained" value={experiment.trained_at ? new Date(experiment.trained_at).toLocaleString() : "N/A"} />
           </dl>
         </section>
@@ -173,6 +178,12 @@ export default async function ExperimentDetailPage({ params }: ExperimentDetailP
               className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-ink"
             >
               Monitoring detail
+            </Link>
+            <Link
+              href={`/performance?training_run_id=${experiment.training_run_id}`}
+              className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-ink"
+            >
+              Reviewed performance
             </Link>
           </div>
           <div className="mt-5 grid gap-3">

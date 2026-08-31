@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from app.models.article import ArticleLabel
 from app.models.training import ClassicalModelType, ModelFamily
 from app.schemas.ml import InfluentialItem
+from app.schemas.review import AnalysisReviewInfo
 
 
 class AnalysisHistorySummary(BaseModel):
@@ -23,6 +24,7 @@ class AnalysisHistorySummary(BaseModel):
     confidence: float | None
     explanation_available: bool
     explanation_method: str | None
+    review: AnalysisReviewInfo
     created_at: datetime
     updated_at: datetime
 
@@ -56,6 +58,7 @@ class AnalysisHistoryDetail(BaseModel):
     probability_method: str | None
     explanation_status: str
     explanation: AnalysisExplanationDetail | None
+    review: AnalysisReviewInfo
     created_at: datetime
     updated_at: datetime
 

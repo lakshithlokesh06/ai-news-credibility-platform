@@ -86,6 +86,7 @@ def _schema_status(db: Session) -> ComponentStatus:
         "dataset_import_runs",
         "ml_training_runs",
         "analysis_records",
+        "analysis_reviews",
         "model_monitoring_profiles",
         "model_lifecycle_events",
     }

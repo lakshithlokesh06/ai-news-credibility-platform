@@ -3,10 +3,12 @@ from app.models.analysis import AnalysisRecord
 from app.models.article import DatasetImportRun, NewsArticle
 from app.models.lifecycle import ModelLifecycleEvent
 from app.models.monitoring import ModelMonitoringProfile
+from app.models.review import AnalysisReview
 from app.models.training import MLTrainingRun
 
 __all__ = [
     "AnalysisRecord",
+    "AnalysisReview",
     "Base",
     "DatasetImportRun",
     "MLTrainingRun",

@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     mutation_rate_limit: int = Field(default=60, ge=1, le=10000)
     monitoring_rate_limit: int = Field(default=60, ge=1, le=10000)
     trusted_proxy_headers: bool = False
+    review_note_max_chars: int = Field(default=1000, ge=1, le=5000)
+    review_evidence_note_max_chars: int = Field(default=2000, ge=1, le=10000)
+    performance_min_reviewed_samples: int = Field(default=20, ge=1, le=100000)
+    calibration_default_bins: int = Field(default=10, ge=2, le=20)
+    high_confidence_error_threshold: float = Field(default=0.90, ge=0.5, le=1.0)
 
     @field_validator("api_v1_prefix")
     @classmethod
