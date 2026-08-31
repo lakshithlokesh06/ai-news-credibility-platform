@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.rate_limit import rate_limit
 from app.db.session import get_db
 from app.models.training import ClassicalModelType, ModelFamily, ModelLifecycleStatus, TrainingRunStatus
 from app.schemas.experiments import (
@@ -57,6 +58,7 @@ async def list_experiments(
 async def compare_experiments(
     request: ExperimentComparisonRequest,
     http_request: Request,
+    _rate_limit: None = rate_limit("mutation"),
     db: Session = Depends(get_db),
 ) -> ExperimentComparisonResponse:
     service = ExperimentService(

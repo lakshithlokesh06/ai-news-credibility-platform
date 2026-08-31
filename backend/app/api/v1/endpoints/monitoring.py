@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.rate_limit import rate_limit
 from app.db.session import get_db
 from app.monitoring.config import MonitoringError
 from app.monitoring.service import MonitoringService
@@ -88,6 +89,7 @@ async def monitor_model(
 async def refresh_reference_profile(
     training_run_id: UUID,
     http_request: Request,
+    _rate_limit: None = rate_limit("monitoring"),
     db: Session = Depends(get_db),
 ) -> MonitoringProfileResponse:
     service = MonitoringService(

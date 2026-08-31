@@ -4,7 +4,7 @@ import { Archive, RefreshCcw, Trophy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ExperimentSummary, ModelLifecycleStatus, apiBaseUrl, formatLifecycleStatus } from "@/lib/api";
+import { ExperimentSummary, ModelLifecycleStatus, apiBaseUrl, apiErrorMessage, formatLifecycleStatus } from "@/lib/api";
 
 type LifecycleActionsProps = {
   trainingRunId: string;
@@ -44,8 +44,7 @@ export function LifecycleActions({
       });
       const payload = await response.json();
       if (!response.ok) {
-        const detail = payload.detail;
-        setMessage(typeof detail === "object" && detail?.message ? String(detail.message) : "Lifecycle action failed.");
+        setMessage(apiErrorMessage(payload, "Lifecycle action failed."));
         return;
       }
       setMessage(payload.message ?? "Lifecycle updated.");

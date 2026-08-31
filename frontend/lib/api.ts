@@ -472,6 +472,30 @@ export type PaginatedResponse<T> = {
 export const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
+export function apiErrorMessage(payload: unknown, fallback: string) {
+  if (typeof payload === "object" && payload !== null) {
+    const record = payload as Record<string, unknown>;
+    const error = record.error;
+    if (typeof error === "object" && error !== null && "message" in error) {
+      return String((error as Record<string, unknown>).message);
+    }
+    const detail = record.detail;
+    if (typeof detail === "string") {
+      return detail;
+    }
+    if (typeof detail === "object" && detail !== null) {
+      const detailRecord = detail as Record<string, unknown>;
+      if (detailRecord.message) {
+        return String(detailRecord.message);
+      }
+      if (detailRecord.error) {
+        return String(detailRecord.error);
+      }
+    }
+  }
+  return fallback;
+}
+
 export async function fetchFromApi<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     cache: "no-store",

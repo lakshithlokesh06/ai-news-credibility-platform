@@ -177,6 +177,8 @@ class DatasetIngestionService:
             raise DatasetImportError("Import path is outside the approved data directory.")
         if not candidate.exists() or not candidate.is_file():
             raise DatasetImportError(f"CSV file '{filename}' was not found in data/raw.")
+        if candidate.stat().st_size > settings.max_dataset_file_bytes:
+            raise DatasetImportError("CSV file exceeds the configured maximum import size.")
         return candidate
 
     def import_csv(self, request: DatasetImportRequest) -> DatasetImportRun:
@@ -259,4 +261,3 @@ class DatasetIngestionService:
                 self.db.refresh(failed_run)
                 return failed_run
             raise
-

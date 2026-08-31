@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.config import settings
 from app.models.article import ArticleLabel
 from app.models.training import ClassicalModelType, ModelFamily, ModelLifecycleStatus, TrainingRunStatus
 from app.schemas.preprocessing import PreprocessingConfig, TextCompositionConfig
@@ -161,9 +162,19 @@ class PaginatedTrainingRunsResponse(BaseModel):
 
 
 class PredictionRequest(BaseModel):
-    title: str | None = Field(default=None, max_length=1000)
-    content: str | None = None
+    title: str | None = Field(default=None, max_length=settings.max_article_title_chars)
+    content: str | None = Field(default=None, max_length=settings.max_article_content_chars)
     save_to_history: bool = False
+
+    @model_validator(mode="after")
+    def validate_article_size(self) -> "PredictionRequest":
+        title_length = len(self.title or "")
+        content_length = len(self.content or "")
+        if title_length + content_length > settings.max_combined_article_chars:
+            raise ValueError(
+                f"Combined title and content must be {settings.max_combined_article_chars} characters or fewer."
+            )
+        return self
 
 
 class ExplanationConfig(BaseModel):

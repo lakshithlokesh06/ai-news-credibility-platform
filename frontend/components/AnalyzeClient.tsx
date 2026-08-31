@@ -8,6 +8,7 @@ import {
   InfluentialItem,
   MLTrainingRun,
   PredictionResponse,
+  apiErrorMessage,
   apiBaseUrl,
   formatExplanationMethod,
   formatMetric,
@@ -55,7 +56,7 @@ export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setError(typeof payload.detail === "string" ? payload.detail : "Prediction failed.");
+        setError(apiErrorMessage(payload, "Prediction failed."));
         return;
       }
       const predictionPayload = payload as PredictionResponse;
@@ -96,12 +97,7 @@ export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        const detail = payload.detail;
-        setExplanationError(
-          typeof detail === "object" && detail?.message
-            ? String(detail.message)
-            : "Explanation failed.",
-        );
+        setExplanationError(apiErrorMessage(payload, "Explanation failed."));
         return;
       }
       const explanationPayload = payload as ExplanationResponse;

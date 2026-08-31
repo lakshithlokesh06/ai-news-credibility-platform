@@ -84,6 +84,19 @@ The default development database URL is:
 postgresql+psycopg://postgres:postgres@localhost:5432/ai_news_credibility
 ```
 
+## Production Readiness
+
+The backend includes centralized environment validation, explicit production CORS checks, request IDs, security headers, structured request logging, in-process rate limits, bounded training/explainability concurrency, liveness/readiness endpoints, safe system metadata, and aggregate process metrics.
+
+Operational endpoints:
+
+- `GET /health` and `GET /api/v1/health` - process liveness
+- `GET /api/v1/readiness` - database, schema, storage, and champion artifact readiness
+- `GET /api/v1/system/info` - safe application metadata
+- `GET /api/v1/system/metrics` - safe in-process request counters
+
+Detailed deployment and security notes live in [docs/deployment.md](/Users/lakshithlokesh/Documents/ChatGPT/ai-news-credibility-platform/docs/deployment.md) and [docs/security.md](/Users/lakshithlokesh/Documents/ChatGPT/ai-news-credibility-platform/docs/security.md).
+
 ## Backend
 
 From the `backend/` directory:
@@ -107,6 +120,9 @@ The backend exposes:
 
 - `GET /health`
 - `GET /api/v1/health`
+- `GET /api/v1/readiness`
+- `GET /api/v1/system/info`
+- `GET /api/v1/system/metrics`
 - `GET /api/v1/dataset-imports`
 - `GET /api/v1/dataset-imports/{import_run_id}`
 - `POST /api/v1/dataset-imports`

@@ -37,7 +37,11 @@ pnpm-debug.log*
 *.db
 *.sqlite
 *.sqlite3
+*.dump
+*.sql
 postgres-data/
+logs/
+*.log
 
 # Large or generated ML/data artifacts
 data/raw/*

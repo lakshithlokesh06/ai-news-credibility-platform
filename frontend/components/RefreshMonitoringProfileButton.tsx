@@ -4,7 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { apiBaseUrl } from "@/lib/api";
+import { apiBaseUrl, apiErrorMessage } from "@/lib/api";
 
 type RefreshMonitoringProfileButtonProps = {
   trainingRunId: string;
@@ -21,8 +21,9 @@ export function RefreshMonitoringProfileButton({ trainingRunId }: RefreshMonitor
         `${apiBaseUrl}/api/v1/monitoring/models/${trainingRunId}/reference-profile`,
         { method: "POST" },
       );
+      const payload = await response.json();
       if (!response.ok) {
-        throw new Error(`Profile refresh failed with status ${response.status}`);
+        throw new Error(apiErrorMessage(payload, "Profile refresh failed."));
       }
       setStatus("saved");
       router.refresh();

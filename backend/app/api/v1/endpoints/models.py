@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.core.rate_limit import rate_limit
 from app.db.session import get_db
 from app.schemas.experiments import ChampionResponse, LifecycleActionResponse
 from app.services.experiments import ExperimentError, ExperimentService
@@ -30,6 +31,7 @@ async def get_champion(
 async def promote_model(
     training_run_id: UUID,
     http_request: Request,
+    _rate_limit: None = rate_limit("mutation"),
     db: Session = Depends(get_db),
 ) -> LifecycleActionResponse:
     try:
@@ -45,6 +47,7 @@ async def promote_model(
 async def archive_model(
     training_run_id: UUID,
     http_request: Request,
+    _rate_limit: None = rate_limit("mutation"),
     db: Session = Depends(get_db),
 ) -> LifecycleActionResponse:
     try:
@@ -60,6 +63,7 @@ async def archive_model(
 async def restore_model(
     training_run_id: UUID,
     http_request: Request,
+    _rate_limit: None = rate_limit("mutation"),
     db: Session = Depends(get_db),
 ) -> LifecycleActionResponse:
     try:

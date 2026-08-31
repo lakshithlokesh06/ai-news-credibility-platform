@@ -3,7 +3,7 @@
 import { Loader2, Play } from "lucide-react";
 import { useState } from "react";
 
-import { apiBaseUrl } from "@/lib/api";
+import { apiBaseUrl, apiErrorMessage } from "@/lib/api";
 
 export function TrainingAction() {
   const [modelType, setModelType] = useState("logistic_regression");
@@ -25,7 +25,7 @@ export function TrainingAction() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        setStatus(payload.detail?.error ?? payload.detail?.message ?? "Training could not start.");
+        setStatus(apiErrorMessage(payload, "Training could not start."));
         return;
       }
       setStatus("Training completed. Refreshing registry...");

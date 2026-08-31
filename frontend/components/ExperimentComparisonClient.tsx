@@ -7,6 +7,7 @@ import {
   ExperimentComparison,
   ExperimentSummary,
   apiBaseUrl,
+  apiErrorMessage,
   formatMetric,
   formatModelFamily,
   formatModelType,
@@ -67,8 +68,7 @@ export function ExperimentComparisonClient({ experiments }: ExperimentComparison
       });
       const payload = await response.json();
       if (!response.ok) {
-        const detail = payload.detail;
-        setError(typeof detail === "object" && detail?.message ? String(detail.message) : "Comparison failed.");
+        setError(apiErrorMessage(payload, "Comparison failed."));
         return;
       }
       setComparison(payload as ExperimentComparison);

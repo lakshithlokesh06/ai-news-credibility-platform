@@ -1,3 +1,24 @@
+x-backend-env: &backend-env
+  APP_ENV: development
+  DEBUG: "false"
+  DOCS_ENABLED: "true"
+  DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/ai_news_credibility
+  BACKEND_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+  LOG_LEVEL: INFO
+  MAX_ARTICLE_TITLE_CHARS: "1000"
+  MAX_ARTICLE_CONTENT_CHARS: "20000"
+  MAX_COMBINED_ARTICLE_CHARS: "24000"
+  MAX_DATASET_FILE_BYTES: "52428800"
+  TRAINING_CONCURRENCY_LIMIT: "1"
+  EXPLANATION_CONCURRENCY_LIMIT: "1"
+  RATE_LIMIT_WINDOW_SECONDS: "60"
+  PREDICTION_RATE_LIMIT: "120"
+  EXPLANATION_RATE_LIMIT: "30"
+  TRAINING_RATE_LIMIT: "10"
+  MUTATION_RATE_LIMIT: "60"
+  MONITORING_RATE_LIMIT: "60"
+  TRUSTED_PROXY_HEADERS: "false"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,6 +38,62 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: ./backend
+    container_name: ai-news-credibility-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *backend-env
+    volumes:
+      - ./data/raw:/app/data/raw
+      - model_data:/app/models/trained
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: ai-news-credibility-backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/raw:/app/data/raw
+      - model_data:/app/models/trained
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/readiness', timeout=3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    container_name: ai-news-credibility-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
-
+  model_data:

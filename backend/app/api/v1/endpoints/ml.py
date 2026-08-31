@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.capacity import capacity_guard
+from app.core.rate_limit import rate_limit
 from app.explainability.config import ExplanationError
 from app.explainability.service import ExplanationService
 from app.ml.comparison import ModelComparisonService
@@ -34,6 +36,8 @@ router = APIRouter(prefix="/ml")
 async def start_training_run(
     request: TrainingRunCreate,
     http_request: Request,
+    _rate_limit: None = rate_limit("training"),
+    _capacity: None = capacity_guard("training"),
     db: Session = Depends(get_db),
 ) -> MLTrainingRunResponse:
     service = TrainingService(
@@ -82,6 +86,7 @@ async def predict_with_model(
     training_run_id: UUID,
     request: PredictionRequest,
     http_request: Request,
+    _rate_limit: None = rate_limit("prediction"),
     db: Session = Depends(get_db),
 ) -> PredictionResponse:
     repository = TrainingRunRepository(db)
@@ -111,6 +116,8 @@ async def explain_model_prediction(
     training_run_id: UUID,
     request: ExplanationRequest,
     http_request: Request,
+    _rate_limit: None = rate_limit("explanation"),
+    _capacity: None = capacity_guard("explanation"),
     db: Session = Depends(get_db),
 ) -> ExplanationResponse:
     history_service = AnalysisHistoryService(db)

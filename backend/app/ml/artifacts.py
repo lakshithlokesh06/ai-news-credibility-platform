@@ -61,19 +61,7 @@ class ArtifactStore:
         return str(artifact_dir.relative_to(self.base_dir)), checksum
 
     def load(self, relative_path: str) -> tuple[dict[str, Any], dict[str, Any]]:
-        artifact_dir = resolve_artifact_dir(relative_path, self.base_dir)
-        model_path = artifact_dir / MODEL_FILENAME
-        metadata_path = artifact_dir / METADATA_FILENAME
-        if not model_path.exists() or not metadata_path.exists():
-            raise ArtifactError("Artifact is incomplete; expected model.joblib and metadata.json.")
-
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        if metadata.get("artifact_version") != ARTIFACT_VERSION:
-            raise ArtifactError("Artifact version is not compatible with this loader.")
-        expected_checksum = metadata.get("artifact_checksum")
-        if not expected_checksum or _checksum(model_path) != expected_checksum:
-            raise ArtifactError("Artifact checksum validation failed.")
-
+        _artifact_dir, model_path, metadata = self.validate_metadata(relative_path)
         payload = joblib.load(model_path)
         required_keys = {
             "classifier",
@@ -87,3 +75,17 @@ class ArtifactStore:
             raise ArtifactError("Artifact payload is malformed.")
         return payload, metadata
 
+    def validate_metadata(self, relative_path: str) -> tuple[Path, Path, dict[str, Any]]:
+        artifact_dir = resolve_artifact_dir(relative_path, self.base_dir)
+        model_path = artifact_dir / MODEL_FILENAME
+        metadata_path = artifact_dir / METADATA_FILENAME
+        if not model_path.exists() or not metadata_path.exists():
+            raise ArtifactError("Artifact is incomplete; expected model.joblib and metadata.json.")
+
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if metadata.get("artifact_version") != ARTIFACT_VERSION:
+            raise ArtifactError("Artifact version is not compatible with this loader.")
+        expected_checksum = metadata.get("artifact_checksum")
+        if not expected_checksum or _checksum(model_path) != expected_checksum:
+            raise ArtifactError("Artifact checksum validation failed.")
+        return artifact_dir, model_path, metadata
