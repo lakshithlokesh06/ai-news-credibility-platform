@@ -304,6 +304,9 @@ function ErrorTable({ errors }: { errors: ErrorAnalysis }) {
                   <td className="px-3 py-4">
                     <Link href={`/history/${item.analysis_id}`} className="font-semibold text-ink">{item.title || "Untitled analysis"}</Link>
                     {item.article_preview ? <p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">{item.article_preview}</p> : null}
+                    <Link href={`/history/${item.analysis_id}/evidence`} className="mt-2 inline-flex text-xs font-semibold text-slate-700">
+                      Evidence workspace
+                    </Link>
                   </td>
                   <td className="px-3 py-4 text-slate-700">{item.predicted_label}</td>
                   <td className="px-3 py-4 text-slate-700">{item.verified_label}</td>

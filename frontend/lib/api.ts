@@ -63,6 +63,8 @@ export type ModelLifecycleStatus = "candidate" | "champion" | "archived";
 export type ReviewState = "unreviewed" | "reviewed";
 export type ReviewFilter = "all" | "unreviewed" | "reviewed" | "correct" | "incorrect";
 export type ConfidenceBucket = "all" | "high" | "low";
+export type ClaimStatus = "open" | "reviewed";
+export type EvidenceAssessment = "supports" | "contradicts" | "neutral" | "unclear";
 
 export type MLTrainingRun = {
   id: string;
@@ -268,7 +270,78 @@ export type ReviewQueueItem = {
   confidence: number | null;
   explanation_available: boolean;
   review: AnalysisReviewInfo;
+  evidence_summary: AnalysisEvidenceSummary;
   created_at: string;
+};
+
+export type ClaimEvidenceCounts = {
+  total: number;
+  supports: number;
+  contradicts: number;
+  neutral: number;
+  unclear: number;
+};
+
+export type EvidenceReference = {
+  id: string;
+  claim_id: string;
+  source_url: string;
+  source_title: string | null;
+  publisher: string | null;
+  publication_date: string | null;
+  assessment: EvidenceAssessment;
+  evidence_excerpt: string | null;
+  reviewer_note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnalysisClaim = {
+  id: string;
+  analysis_id: string;
+  claim_text: string;
+  start_offset: number | null;
+  end_offset: number | null;
+  status: ClaimStatus;
+  reviewer_note: string | null;
+  evidence_counts: ClaimEvidenceCounts;
+  evidence: EvidenceReference[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnalysisEvidenceSummary = {
+  analysis_id: string;
+  total_claims: number;
+  claims_with_evidence: number;
+  claims_without_evidence: number;
+  total_evidence_references: number;
+  supporting_evidence_count: number;
+  contradicting_evidence_count: number;
+  neutral_evidence_count: number;
+  unclear_evidence_count: number;
+  evidence_coverage_percentage: number | null;
+  latest_evidence_updated_at: string | null;
+  interpretation: string;
+};
+
+export type ClaimsList = {
+  items: AnalysisClaim[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type EvidenceStatistics = {
+  analyses_with_claims: number;
+  total_claims: number;
+  total_evidence_records: number;
+  claims_with_evidence: number;
+  claims_without_evidence: number;
+  evidence_coverage_percentage: number | null;
+  assessment_distribution: Record<EvidenceAssessment, number>;
+  latest_evidence_updated_at: string | null;
+  interpretation: string;
 };
 
 export type TrainingRunReviewSummary = {
@@ -724,6 +797,26 @@ export function formatReviewedLabel(label: ArticleLabel | null | undefined) {
     return "No human-verified label";
   }
   return label === "FAKE" ? "Human-verified FAKE" : "Human-verified REAL";
+}
+
+export function formatEvidenceAssessment(assessment: EvidenceAssessment) {
+  const labels: Record<EvidenceAssessment, string> = {
+    supports: "Supports claim",
+    contradicts: "Contradicts claim",
+    neutral: "Neutral",
+    unclear: "Unclear",
+  };
+  return labels[assessment];
+}
+
+export function formatEvidenceReadiness(summary: AnalysisEvidenceSummary | null | undefined) {
+  if (!summary || summary.total_claims === 0) {
+    return "No claims";
+  }
+  if (summary.total_evidence_references === 0) {
+    return "Claims added";
+  }
+  return "Evidence added";
 }
 
 export function formatExplanationMethod(method: string | null | undefined) {

@@ -59,6 +59,11 @@ class AnalysisRecord(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    claims: Mapped[list["AnalysisClaim"]] = relationship(
+        back_populates="analysis",
+        cascade="all, delete-orphan",
+        order_by="AnalysisClaim.created_at.desc()",
+    )
 
     __table_args__ = (
         CheckConstraint("predicted_label IN ('REAL', 'FAKE')", name="ck_analysis_records_predicted_label"),

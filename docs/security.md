@@ -9,6 +9,7 @@ This platform is currently a single-user/local architecture. It has production-o
 - Model artifacts are loaded only from controlled training-run metadata under the configured model directory.
 - Artifact loaders reject traversal and validate checksums before use.
 - Transformer artifact readiness checks validate metadata and checksums without loading model weights.
+- Manual evidence URLs are validated as stored text only. The backend accepts only `http` and `https` URL shapes and does not resolve DNS, fetch pages, parse metadata, scrape content, or call external fact-checking services.
 
 ## Input Limits
 
@@ -16,7 +17,7 @@ Article title, article content, combined article input, dataset import size, mon
 
 Oversized article inputs are rejected with validation errors. Validation responses do not echo raw article bodies.
 
-Human review notes are bounded plain-text fields. The frontend renders them as text, not raw HTML.
+Human review notes, manual claim notes, evidence excerpts, and evidence notes are bounded plain-text fields. The frontend renders them as text, not raw HTML.
 
 ## Observability
 
@@ -38,9 +39,15 @@ A strict Content Security Policy is not added yet because it requires coordinate
 
 ## Data Privacy
 
-Saved analysis content resides in PostgreSQL. History detail endpoints return saved article content; history summaries, review queue responses, reviewed-performance APIs, calibration APIs, error-analysis APIs, and monitoring endpoints avoid full article bodies. Monitoring remains aggregate-only.
+Saved analysis content resides in PostgreSQL. History detail endpoints return saved article content; history summaries, review queue responses, reviewed-performance APIs, calibration APIs, error-analysis APIs, evidence-statistics APIs, and monitoring endpoints avoid full article bodies. Monitoring remains aggregate-only.
 
-Human-verified labels must be explicitly entered. They are not inferred from predictions, confidence, explanations, source metadata, training labels, web results, or external APIs. Review notes are not returned by aggregate metrics endpoints.
+Human-verified labels must be explicitly entered. They are not inferred from predictions, confidence, explanations, source metadata, manual evidence counts, training labels, web results, or external APIs. Review notes, claim notes, evidence URLs, evidence excerpts, and evidence notes are not returned by aggregate metrics endpoints.
+
+## Manual Evidence Review
+
+Manual evidence records are reviewer-entered context, not trusted remote resources. URL validation is intentionally syntactic to avoid SSRF risk: the system stores the URL string and a normalized form for duplicate checks, but it never opens network connections, follows redirects, checks availability, extracts page text, or determines whether a source is authoritative.
+
+Evidence assessments such as `supports` or `contradicts` are human workflow annotations. They do not automatically set verified labels, modify predictions, influence model lifecycle state, or trigger retraining.
 
 ## Deployment Limitations
 

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.core.config import settings
 from app.models.article import ArticleLabel
 from app.models.training import ClassicalModelType, ModelFamily, ModelLifecycleStatus
+from app.schemas.evidence import AnalysisEvidenceSummary
 
 ReviewState = Literal["unreviewed", "reviewed"]
 ReviewFilter = Literal["all", "unreviewed", "reviewed", "correct", "incorrect"]
@@ -66,6 +67,7 @@ class ReviewQueueItem(BaseModel):
     confidence: float | None
     explanation_available: bool
     review: AnalysisReviewInfo
+    evidence_summary: AnalysisEvidenceSummary
     created_at: datetime
 
 

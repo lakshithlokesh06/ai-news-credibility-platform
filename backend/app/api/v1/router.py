@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import articles, experiments, health, history, imports, ml, models, monitoring, reviews, statistics
+from app.api.v1.endpoints import articles, evidence, experiments, health, history, imports, ml, models, monitoring, reviews, statistics
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
@@ -11,5 +11,6 @@ api_router.include_router(ml.router, tags=["ml"])
 api_router.include_router(experiments.router, tags=["experiments"])
 api_router.include_router(models.router, tags=["models"])
 api_router.include_router(history.router, tags=["history"])
+api_router.include_router(evidence.router, tags=["evidence"])
 api_router.include_router(monitoring.router, tags=["monitoring"])
 api_router.include_router(reviews.router, tags=["reviews"])

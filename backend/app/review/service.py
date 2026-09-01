@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.evidence.service import EvidenceService
 from app.models.analysis import AnalysisRecord
 from app.models.article import ArticleLabel
 from app.models.review import AnalysisReview, ReviewStatus
@@ -111,6 +112,7 @@ class ReviewService:
             limit=limit,
             offset=offset,
         )
+        evidence_service = EvidenceService(self.db)
         return PaginatedReviewQueueResponse(
             items=[
                 {
@@ -126,6 +128,7 @@ class ReviewService:
                     "confidence": record.confidence,
                     "explanation_available": has_explanation(record),
                     "review": self.review_info(record, record.review),
+                    "evidence_summary": evidence_service.analysis_summary(record.id),
                     "created_at": record.created_at,
                 }
                 for record in items

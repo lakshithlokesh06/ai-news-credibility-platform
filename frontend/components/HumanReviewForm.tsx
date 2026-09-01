@@ -4,16 +4,17 @@ import { Check, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { AnalysisReviewInfo, ArticleLabel, apiBaseUrl, apiErrorMessage } from "@/lib/api";
+import { AnalysisEvidenceSummary, AnalysisReviewInfo, ArticleLabel, apiBaseUrl, apiErrorMessage } from "@/lib/api";
 
 type HumanReviewFormProps = {
   analysisId: string;
   predictedLabel: ArticleLabel;
   review: AnalysisReviewInfo;
   showNotes?: boolean;
+  evidenceSummary?: AnalysisEvidenceSummary | null;
 };
 
-export function HumanReviewForm({ analysisId, predictedLabel, review, showNotes = false }: HumanReviewFormProps) {
+export function HumanReviewForm({ analysisId, predictedLabel, review, showNotes = false, evidenceSummary }: HumanReviewFormProps) {
   const router = useRouter();
   const [selectedLabel, setSelectedLabel] = useState<ArticleLabel>(review.verified_label ?? predictedLabel);
   const [reviewerNote, setReviewerNote] = useState(review.reviewer_note ?? "");
@@ -131,6 +132,22 @@ export function HumanReviewForm({ analysisId, predictedLabel, review, showNotes 
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-700"
             />
           </label>
+        </div>
+      ) : null}
+
+      {evidenceSummary ? (
+        <div className="rounded-md bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+          <p>
+            Claims: {evidenceSummary.total_claims} / Evidence references: {evidenceSummary.total_evidence_references}
+          </p>
+          <p>
+            Supports: {evidenceSummary.supporting_evidence_count} / Contradicts: {evidenceSummary.contradicting_evidence_count} / Neutral: {evidenceSummary.neutral_evidence_count + evidenceSummary.unclear_evidence_count}
+          </p>
+          {evidenceSummary.total_evidence_references > 0 ? (
+            <p className="mt-1 text-slate-500">
+              You have recorded evidence for this analysis. The verified label remains your manual judgment.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

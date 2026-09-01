@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, FileText, UserCheck } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, FileText, UserCheck } from "lucide-react";
 
 import { DeleteHistoryButton } from "@/components/DeleteHistoryButton";
 import { EmptyState } from "@/components/EmptyState";
@@ -7,6 +7,7 @@ import { HumanReviewForm } from "@/components/HumanReviewForm";
 import { PageHeader } from "@/components/PageHeader";
 import {
   AnalysisHistoryDetail,
+  AnalysisEvidenceSummary,
   InfluentialItem,
   fetchFromApi,
   formatExplanationMethod,
@@ -25,7 +26,11 @@ type HistoryDetailPageProps = {
 
 async function loadAnalysis(analysisId: string) {
   try {
-    return await fetchFromApi<AnalysisHistoryDetail>(`/api/v1/history/${analysisId}`);
+    const [analysis, evidenceSummary] = await Promise.all([
+      fetchFromApi<AnalysisHistoryDetail>(`/api/v1/history/${analysisId}`),
+      fetchFromApi<AnalysisEvidenceSummary>(`/api/v1/history/${analysisId}/evidence-summary`),
+    ]);
+    return { analysis, evidenceSummary };
   } catch {
     return null;
   }
@@ -33,9 +38,9 @@ async function loadAnalysis(analysisId: string) {
 
 export default async function HistoryDetailPage({ params }: HistoryDetailPageProps) {
   const { analysisId } = await params;
-  const analysis = await loadAnalysis(analysisId);
+  const data = await loadAnalysis(analysisId);
 
-  if (!analysis) {
+  if (!data) {
     return (
       <>
         <PageHeader
@@ -53,6 +58,9 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
       </>
     );
   }
+
+  const analysis = data.analysis;
+  const evidenceSummary = data.evidenceSummary;
 
   return (
     <>
@@ -135,9 +143,32 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
               analysisId={analysis.id}
               predictedLabel={analysis.predicted_label}
               review={analysis.review}
+              evidenceSummary={evidenceSummary}
               showNotes
             />
           </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="flex items-center gap-2">
+            <ClipboardCheck aria-hidden="true" className="h-4 w-4 text-signal" />
+            <h2 className="text-lg font-semibold text-ink">Evidence & Claims</h2>
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
+            <MetricCard label="Claims" value={String(evidenceSummary.total_claims)} />
+            <MetricCard label="Evidence references" value={String(evidenceSummary.total_evidence_references)} />
+            <MetricCard label="Supports" value={String(evidenceSummary.supporting_evidence_count)} />
+            <MetricCard label="Contradicts" value={String(evidenceSummary.contradicting_evidence_count)} />
+          </div>
+          <p className="mt-4 rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+            Evidence coverage is a workflow metric, not a credibility score. Evidence does not automatically determine the verified label.
+          </p>
+          <Link
+            href={`/history/${analysis.id}/evidence`}
+            className="mt-5 inline-flex items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
+          >
+            Open evidence workspace
+          </Link>
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
@@ -178,6 +209,15 @@ function Definition({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-slate-500">{label}</dt>
       <dd className="mt-1 font-semibold text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-surface p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-ink">{value}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 Production-ready foundation for a full-stack AI/data-science platform for model-based news credibility and misinformation analysis.
 
-The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, experiment tracking, explicit champion selection, model lifecycle management, model inference APIs, explainability APIs, persisted analysis history, human review, reviewed-production performance metrics, calibration diagnostics, error analysis, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
+The current implementation includes the application foundation plus dataset ingestion, canonical article persistence, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning support, model artifacts, model comparison, experiment tracking, explicit champion selection, model lifecycle management, model inference APIs, explainability APIs, persisted analysis history, human review, manual claim/evidence review, reviewed-production performance metrics, calibration diagnostics, error analysis, reference-profile generation, and model monitoring diagnostics. It does not implement authentication, LLMs, external fact-checking APIs, web scraping, RAG, source reputation scoring, claim verification, automatic retraining, or live news APIs.
 
 ## Purpose
 
@@ -13,11 +13,11 @@ The system should provide model-based credibility and misinformation predictions
 ## Current Status
 
 - Monorepo scaffold with separate frontend and backend applications
-- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, experiment/lifecycle services, explainability services, history services, review services, and monitoring services
-- Next.js frontend shell with professional product navigation, live data overview, model registry, experiment tracking, evaluation dashboard, inference workspace, history dashboard, history detail views, review queue, reviewed-production performance dashboard, and monitoring dashboards
+- FastAPI backend with health endpoints, configuration, logging, CORS, exceptions, SQLAlchemy session setup, Alembic, article models, import tracking, ingestion services, preprocessing services, dataset statistics, classical ML services, transformer services, experiment/lifecycle services, explainability services, history services, review services, manual evidence services, and monitoring services
+- Next.js frontend shell with professional product navigation, live data overview, model registry, experiment tracking, evaluation dashboard, inference workspace, history dashboard, history detail views, manual evidence workspace, review queue, reviewed-production performance dashboard, and monitoring dashboards
 - PostgreSQL development database via Docker Compose
 - Backend tests for startup, health endpoints, ingestion, preprocessing, statistics, data APIs, classical training, transformer dispatch, artifacts, inference, explainability, analysis history, analytics, and model comparison
-- Documentation for the current architecture and roadmap
+- Documentation for the current architecture, manual evidence workflow, and roadmap
 
 ## Technology Stack
 
@@ -145,9 +145,18 @@ The backend exposes:
 - `GET /api/v1/history`
 - `GET /api/v1/history/statistics`
 - `GET /api/v1/history/{analysis_id}`
+- `POST /api/v1/history/{analysis_id}/claims`
+- `GET /api/v1/history/{analysis_id}/claims`
+- `GET /api/v1/history/{analysis_id}/evidence-summary`
 - `PUT /api/v1/history/{analysis_id}/review`
 - `DELETE /api/v1/history/{analysis_id}/review`
 - `DELETE /api/v1/history/{analysis_id}`
+- `PATCH /api/v1/claims/{claim_id}`
+- `DELETE /api/v1/claims/{claim_id}`
+- `POST /api/v1/claims/{claim_id}/evidence`
+- `GET /api/v1/evidence/statistics`
+- `PATCH /api/v1/evidence/{evidence_id}`
+- `DELETE /api/v1/evidence/{evidence_id}`
 - `GET /api/v1/reviews/queue`
 - `GET /api/v1/reviews/statistics`
 - `GET /api/v1/reviews/performance`
@@ -352,6 +361,22 @@ For precision, recall, F1, and false-positive/false-negative labels, `FAKE` is t
 
 Metrics below `PERFORMANCE_MIN_REVIEWED_SAMPLES` are marked preliminary. The platform does not infer labels from confidence, explanation, source, model output, training labels, web results, or external APIs, and it never retrains or changes champion state automatically from review metrics.
 
+## Manual Evidence And Claim Review
+
+Saved analyses include a dedicated human evidence workspace:
+
+```text
+Saved Analysis
+-> Manual Claim Identification
+-> Manual Evidence Reference Entry
+-> Human Evidence Assessment
+-> Optional Human Review
+```
+
+Reviewers can identify claims from the saved article, add notes, record external reference URLs they found themselves, and classify each reference as `supports`, `contradicts`, `neutral`, or `unclear` for that claim. The backend validates URL shape and stores the URL and reviewer-entered metadata; it does not fetch pages, inspect OpenGraph data, crawl sites, scrape content, classify evidence, assign source trust scores, or decide the verified label.
+
+Evidence summaries are workflow context only. They report counts, coverage, and assessment distribution so reviewers can see how much manual evidence has been recorded before assigning a human label. They are not credibility scores and are not mixed into model evaluation, monitoring drift, lifecycle promotion, or retraining. See [docs/evidence-review.md](/Users/lakshithlokesh/Documents/ChatGPT/ai-news-credibility-platform/docs/evidence-review.md) for the full workflow and limitations.
+
 ## Model Monitoring
 
 The monitoring flow is:
@@ -463,6 +488,7 @@ npm run build
 - `/analyze` - model inference, automatic UI-side history saving, and explicit explanation workspace
 - `/history` - saved analysis dashboard with filters, analytics, and summaries
 - `/history/[analysisId]` - saved analysis detail with persisted prediction/explanation data, human review controls, and deletion
+- `/history/[analysisId]/evidence` - manual claim and evidence review workspace for a saved analysis
 - `/review` - focused queue for assigning human-verified labels to saved analyses
 - `/models` - model registry and training action with model-family awareness
 - `/experiments` - experiment tracking, comparison, and champion overview

@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     performance_min_reviewed_samples: int = Field(default=20, ge=1, le=100000)
     calibration_default_bins: int = Field(default=10, ge=2, le=20)
     high_confidence_error_threshold: float = Field(default=0.90, ge=0.5, le=1.0)
+    claim_text_min_chars: int = Field(default=10, ge=1, le=1000)
+    claim_text_max_chars: int = Field(default=1000, ge=50, le=5000)
+    claim_note_max_chars: int = Field(default=1000, ge=1, le=5000)
+    evidence_url_max_chars: int = Field(default=2048, ge=100, le=8192)
+    evidence_title_max_chars: int = Field(default=500, ge=1, le=2000)
+    evidence_publisher_max_chars: int = Field(default=255, ge=1, le=1000)
+    evidence_excerpt_max_chars: int = Field(default=2000, ge=1, le=10000)
+    evidence_note_max_chars: int = Field(default=1000, ge=1, le=5000)
 
     @field_validator("api_v1_prefix")
     @classmethod
@@ -106,6 +114,8 @@ class Settings(BaseSettings):
                 raise ValueError("DOCS_ENABLED should be false in production unless intentionally overridden.")
         if self.max_combined_article_chars < self.max_article_title_chars:
             raise ValueError("Combined article limit must be at least the title limit.")
+        if self.claim_text_max_chars < self.claim_text_min_chars:
+            raise ValueError("Claim text max must be at least the claim text min.")
         return self
 
 

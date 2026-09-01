@@ -27,6 +27,9 @@ Important variables:
 - `PERFORMANCE_MIN_REVIEWED_SAMPLES`
 - `CALIBRATION_DEFAULT_BINS`
 - `HIGH_CONFIDENCE_ERROR_THRESHOLD`
+- `CLAIM_TEXT_MIN_CHARS`, `CLAIM_TEXT_MAX_CHARS`, `CLAIM_NOTE_MAX_CHARS`
+- `EVIDENCE_URL_MAX_CHARS`, `EVIDENCE_TITLE_MAX_CHARS`, `EVIDENCE_PUBLISHER_MAX_CHARS`
+- `EVIDENCE_EXCERPT_MAX_CHARS`, `EVIDENCE_NOTE_MAX_CHARS`
 
 ## Frontend Configuration
 
@@ -97,6 +100,12 @@ Readiness does not load ML models.
 Reviewed-production metrics require saved analyses with explicit human-verified labels. Below `PERFORMANCE_MIN_REVIEWED_SAMPLES`, metrics are available but marked preliminary. ROC-AUC is unavailable unless reviewed labels contain both classes and usable probabilities exist.
 
 These endpoints do not run inference, SHAP, or training. They derive metrics from persisted predictions, probabilities, and human-entered labels only.
+
+## Manual Evidence Review
+
+The manual evidence workspace requires only PostgreSQL and the existing backend/frontend services. Evidence records are stored in `analysis_claims` and `claim_evidence` after Alembic migrations are applied.
+
+Evidence URLs are stored references only. Deployments do not need outbound web access for this subsystem, and the backend does not fetch URLs, inspect metadata, crawl pages, call fact-checking APIs, or derive verified labels from evidence records.
 
 ## Persistence
 

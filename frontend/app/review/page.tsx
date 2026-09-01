@@ -10,6 +10,7 @@ import {
   ReviewStatistics,
   fetchFromApi,
   formatMetric,
+  formatEvidenceReadiness,
   formatModelFamily,
   formatModelType,
   formatPercentage,
@@ -180,6 +181,9 @@ function ReviewQueue({ queue }: { queue: PaginatedResponse<ReviewQueueItem> & { 
                 <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
                   {item.explanation_available ? "Explanation saved" : "No explanation"}
                 </span>
+                <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800">
+                  {formatEvidenceReadiness(item.evidence_summary)}
+                </span>
               </div>
               <h2 className="mt-3 text-lg font-semibold text-ink">{item.title || "Untitled analysis"}</h2>
               {item.article_preview ? <p className="mt-2 text-sm leading-6 text-slate-600">{item.article_preview}</p> : null}
@@ -188,12 +192,17 @@ function ReviewQueue({ queue }: { queue: PaginatedResponse<ReviewQueueItem> & { 
                 <span>Confidence {formatMetric(item.confidence)}</span>
                 <span>{new Date(item.created_at).toLocaleString()}</span>
               </div>
-              <Link href={`/history/${item.id}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-ink">
+              <Link href={`/history/${item.id}/evidence`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-ink">
                 <UserCheck aria-hidden="true" className="h-4 w-4" />
-                Open full analysis
+                Open evidence workspace
               </Link>
             </div>
-            <HumanReviewForm analysisId={item.id} predictedLabel={item.predicted_label} review={item.review} />
+            <HumanReviewForm
+              analysisId={item.id}
+              predictedLabel={item.predicted_label}
+              review={item.review}
+              evidenceSummary={item.evidence_summary}
+            />
           </div>
         </article>
       ))}

@@ -8,7 +8,7 @@ The project is structured as a modular full-stack monorepo:
 Frontend -> FastAPI -> NLP/ML Services -> PostgreSQL
 ```
 
-The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, experiment tracking, champion model selection, lifecycle management, explicit model explainability, persisted analysis history, human review, reviewed-production metrics, calibration diagnostics, error analysis, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
+The current foundation includes the frontend application shell, backend API skeleton, database connectivity setup, Alembic migrations, canonical article persistence, dataset import tracking, CSV ingestion, preprocessing utilities, dataset statistics, classical ML training/evaluation, transformer fine-tuning and inference, model-family registry metadata, versioned artifacts, model comparison, experiment tracking, champion model selection, lifecycle management, explicit model explainability, persisted analysis history, human review, manual claim/evidence review, reviewed-production metrics, calibration diagnostics, error analysis, history analytics, and model monitoring diagnostics. Authentication, LLMs, RAG, external fact-checking APIs, web scraping, source reputation scoring, claim verification, automatic retraining, and live news APIs are intentionally out of scope for this stage.
 
 The current data pipeline is:
 
@@ -86,6 +86,16 @@ Saved Analysis
 -> Calibration / Error Analysis
 ```
 
+The current manual evidence-review pipeline is:
+
+```text
+Saved Analysis
+-> Manual Claim Identification
+-> Reviewer-Entered Evidence References
+-> Manual Evidence Assessment
+-> Human Review Context
+```
+
 The current experiment lifecycle pipeline is:
 
 ```text
@@ -104,6 +114,7 @@ The Next.js frontend provides the user-facing shell for the future analysis plat
 - Dataset overview page backed by live API data
 - Inference and explanation workspace for completed classical and transformer models
 - Saved analysis history, filtering, analytics, and detail views
+- Manual claim and evidence workspace for saved analyses
 - Model registry and training action with model-family awareness
 - Experiment tracking pages for run metadata, comparison, champion selection, archive/restore actions, and lifecycle history
 - Evaluation dashboard backed by stored validation/test metrics across model families
@@ -129,6 +140,7 @@ The FastAPI backend is organized by responsibility:
 - `explainability/` contains explanation configuration, classical attribution, transformer SHAP attribution, SHAP adapters, token aggregation, normalization, and orchestration services
 - `monitoring/` contains reference-profile generation, current-window aggregation, drift metrics, status rules, and monitoring orchestration
 - `review/` contains human-review persistence access, review updates, reviewed-production metrics, calibration diagnostics, and error analysis
+- `evidence/` contains manual claim/evidence persistence access, URL normalization, field validation, evidence summaries, and aggregate evidence statistics
 - `services/experiments.py` contains experiment summaries, comparability checks, champion validation, lifecycle actions, and pairwise comparison orchestration
 - `utils/` contains shared implementation utilities
 
@@ -149,6 +161,8 @@ Current persistence tables:
 - `model_lifecycle_events`: compact lifecycle audit events for promotion, demotion, archive, and restore actions
 - `analysis_records`: saved local analysis records with model metadata, submitted title/content, prediction probabilities, explanation status, normalized explanation JSON, and timestamps
 - `analysis_reviews`: one current human review per saved analysis, with canonical verified label, simple review status, optional plain-text notes, and timestamps
+- `analysis_claims`: manually identified claims for a saved analysis, with optional offsets, reviewer notes, and workflow status
+- `claim_evidence`: manually entered external evidence references for one claim, with normalized URL uniqueness per claim, optional reviewer-entered source metadata, manual assessment, excerpts, and notes
 - `model_monitoring_profiles`: per-training-run reference profiles with profile version, status, sample count, reference distributions/statistics, feature metadata, and timestamps
 
 No authentication or user-ownership tables have been introduced yet. The current installation is treated as a single-user/local application.
@@ -290,6 +304,26 @@ For reviewed-production metrics, `FAKE` is the positive class. A false positive 
 Review metrics derive only from persisted predictions, probabilities, and explicit human-verified labels. They do not load ML artifacts, run inference, run SHAP, fetch external evidence, generate labels, retrain models, or alter champion state. Aggregate review and performance endpoints return previews and metric summaries, not full article bodies or review-note dumps.
 
 Dataset statistics, evaluation metrics, and history analytics are different concepts. Dataset statistics describe imported labeled training data. Evaluation metrics describe held-out model performance. History analytics describe aggregate characteristics of articles users analyzed and saved locally.
+
+## Manual Claim And Evidence Review
+
+Manual evidence review is intentionally separated from inference, explainability, human labels, and reviewed-production metrics. The `analysis_claims` table stores reviewer-identified claims for a saved analysis. The `claim_evidence` table stores reviewer-entered evidence references for one claim, including the original URL, normalized URL, optional title, publisher, publication date, excerpt, reviewer note, and one manual relationship assessment: `supports`, `contradicts`, `neutral`, or `unclear`.
+
+Evidence APIs:
+
+- `POST /api/v1/history/{analysis_id}/claims`: creates a manual claim for a saved analysis
+- `GET /api/v1/history/{analysis_id}/claims`: lists manual claims and their evidence references
+- `GET /api/v1/history/{analysis_id}/evidence-summary`: returns counts and coverage for one saved analysis
+- `PATCH /api/v1/claims/{claim_id}`: updates claim text, status, note, or offsets
+- `DELETE /api/v1/claims/{claim_id}`: deletes the claim and its evidence references
+- `POST /api/v1/claims/{claim_id}/evidence`: records a manual evidence reference
+- `GET /api/v1/evidence/statistics`: returns aggregate workflow evidence statistics
+- `PATCH /api/v1/evidence/{evidence_id}`: updates a manual evidence reference
+- `DELETE /api/v1/evidence/{evidence_id}`: deletes one manual evidence reference
+
+The backend validates evidence URLs as text only. It accepts only `http` and `https` schemes, normalizes URLs locally for duplicate detection, and never performs DNS resolution, HTTP requests, page fetching, OpenGraph parsing, favicon discovery, scraping, crawling, or external API calls. Publisher, title, excerpt, and assessment values are human-entered metadata.
+
+Evidence summaries report workflow status: total claims, claims with evidence, evidence coverage percentage, total references, and assessment distribution. These values do not produce a `REAL` or `FAKE` label, do not alter review labels, do not affect production-performance metrics, do not alter monitoring drift, do not promote or archive models, and do not trigger retraining.
 
 ## Model Monitoring
 
