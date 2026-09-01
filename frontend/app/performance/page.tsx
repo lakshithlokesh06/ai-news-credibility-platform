@@ -32,18 +32,18 @@ async function loadPerformance(trainingRunId: string | null) {
       return { statistics, selectedId: null, performance: null, calibration: null, errors: null };
     }
     const query = `training_run_id=${selectedId}`;
-    const [performance, calibration, errors] = await Promise.all([
+    const [performance, calibration, falsePositives, falseNegatives] = await Promise.all([
       fetchFromApi<ProductionPerformance>(`/api/v1/reviews/performance?${query}`),
       fetchFromApi<CalibrationDiagnostics>(`/api/v1/reviews/calibration?${query}`),
       fetchFromApi<ErrorAnalysis>(`/api/v1/reviews/errors?${query}&error_type=false_positive&limit=8`),
+      fetchFromApi<ErrorAnalysis>(`/api/v1/reviews/errors?${query}&error_type=false_negative&limit=8`),
     ]);
-    const falseNegatives = await fetchFromApi<ErrorAnalysis>(`/api/v1/reviews/errors?${query}&error_type=false_negative&limit=8`);
     return {
       statistics,
       selectedId,
       performance,
       calibration,
-      errors: { ...errors, items: [...errors.items, ...falseNegatives.items], total: errors.total + falseNegatives.total },
+      errors: { ...falsePositives, items: [...falsePositives.items, ...falseNegatives.items], total: falsePositives.total + falseNegatives.total },
     };
   } catch {
     return null;
@@ -69,7 +69,7 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
       <PageHeader
         eyebrow="Reviewed production metrics"
         title="Performance"
-        description="Post-training evaluation from saved analyses with explicit human-verified labels. Held-out test metrics remain separate."
+        description="Reviewed production performance from saved analyses with explicit human-verified labels. Held-out test performance remains separate."
       />
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
         {!data ? (
@@ -186,7 +186,7 @@ function TestComparison({ performance }: { performance: ProductionPerformance })
     <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-2">
         <GitCompare aria-hidden="true" className="h-4 w-4 text-signal" />
-        <h2 className="text-lg font-semibold text-ink">Test vs Reviewed</h2>
+        <h2 className="text-lg font-semibold text-ink">Held-Out Test vs Reviewed Production</h2>
       </div>
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-full text-left text-sm">
@@ -208,7 +208,9 @@ function TestComparison({ performance }: { performance: ProductionPerformance })
           </tbody>
         </table>
       </div>
-      <p className="mt-4 text-sm leading-6 text-slate-600">Differences are review signals, not automatic proof of drift or overfitting.</p>
+      <p className="mt-4 text-sm leading-6 text-slate-600">
+        Held-out test metrics come from training evaluation. Reviewed production metrics come from saved analyses with human labels. Differences are review signals, not automatic proof of drift or overfitting.
+      </p>
     </section>
   );
 }

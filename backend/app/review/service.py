@@ -112,7 +112,7 @@ class ReviewService:
             limit=limit,
             offset=offset,
         )
-        evidence_service = EvidenceService(self.db)
+        evidence_summaries = EvidenceService(self.db).analysis_summaries([record.id for record in items])
         return PaginatedReviewQueueResponse(
             items=[
                 {
@@ -128,7 +128,7 @@ class ReviewService:
                     "confidence": record.confidence,
                     "explanation_available": has_explanation(record),
                     "review": self.review_info(record, record.review),
-                    "evidence_summary": evidence_service.analysis_summary(record.id),
+                    "evidence_summary": evidence_summaries[record.id],
                     "created_at": record.created_at,
                 }
                 for record in items

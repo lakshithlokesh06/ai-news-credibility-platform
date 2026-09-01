@@ -225,6 +225,7 @@ export default async function DataPage({ searchParams }: DataPageProps) {
             </div>
             <form className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               <select
+                aria-label="Filter by label"
                 name="label"
                 defaultValue={params.label ?? ""}
                 className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"
@@ -234,18 +235,21 @@ export default async function DataPage({ searchParams }: DataPageProps) {
                 <option value="FAKE">FAKE</option>
               </select>
               <input
+                aria-label="Filter by dataset"
                 name="dataset"
                 defaultValue={params.dataset ?? ""}
                 placeholder="Dataset"
                 className="h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-700"
               />
               <input
+                aria-label="Filter by source"
                 name="source"
                 defaultValue={params.source ?? ""}
                 placeholder="Source"
                 className="h-10 rounded-md border border-slate-300 px-3 text-sm text-slate-700"
               />
               <input
+                aria-label="Search articles"
                 name="search"
                 defaultValue={params.search ?? ""}
                 placeholder="Search title/text"
@@ -342,4 +346,3 @@ export default async function DataPage({ searchParams }: DataPageProps) {
     </>
   );
 }
-

@@ -92,12 +92,15 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
         <aside className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-ink">Prediction snapshot</h2>
           <div className="mt-5 grid gap-3 text-sm text-slate-700">
-            <p className="text-xl font-semibold text-ink">
-              {analysis.predicted_label === "FAKE" ? "Likely misinformation" : "Likely credible"}
-            </p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Model Prediction</p>
+              <p className="mt-1 text-xl font-semibold text-ink">
+                {analysis.predicted_label === "FAKE" ? "Likely misinformation" : "Likely credible"}
+              </p>
+            </div>
             <p>REAL probability: {formatMetric(analysis.real_probability)}</p>
             <p>FAKE probability: {formatMetric(analysis.fake_probability)}</p>
-            <p>Confidence: {formatMetric(analysis.confidence)}</p>
+            <p>Model Confidence: {formatMetric(analysis.confidence)}</p>
             <p>Model family: {formatModelFamily(analysis.model_family)}</p>
             <p>Model: {analysis.model_name ?? formatModelType(analysis.model_type)}</p>
             <p>Training run: {analysis.model_display_name}</p>
@@ -108,6 +111,57 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
             <DeleteHistoryButton analysisId={analysis.id} />
           </div>
         </aside>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <h2 className="text-lg font-semibold text-ink">Persisted explanation</h2>
+          {analysis.explanation ? (
+            <div className="mt-5 grid gap-5">
+              <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-3">
+                <p>Method: {formatExplanationMethod(analysis.explanation.explanation_method)}</p>
+                <p>Explained class: {analysis.explanation.explained_class}</p>
+                <p>Generated: {new Date(analysis.explanation.generated_at).toLocaleString()}</p>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <InfluenceList title="Influenced toward FAKE" items={analysis.explanation.influences_toward_fake} tone="fake" />
+                <InfluenceList title="Influenced toward REAL" items={analysis.explanation.influences_toward_real} tone="real" />
+              </div>
+              <div className="rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+                {analysis.explanation.message ? <p>{analysis.explanation.message}</p> : null}
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {analysis.explanation.limitations.map((limitation) => (
+                    <li key={limitation}>{limitation}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              No explanation was saved with this analysis. Opening history never reruns explanation work.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="flex items-center gap-2">
+            <ClipboardCheck aria-hidden="true" className="h-4 w-4 text-signal" />
+            <h2 className="text-lg font-semibold text-ink">Evidence & Claims</h2>
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-4">
+            <MetricCard label="Claims" value={String(evidenceSummary.total_claims)} />
+            <MetricCard label="Evidence references" value={String(evidenceSummary.total_evidence_references)} />
+            <MetricCard label="Supports" value={String(evidenceSummary.supporting_evidence_count)} />
+            <MetricCard label="Contradicts" value={String(evidenceSummary.contradicting_evidence_count)} />
+          </div>
+          <p className="mt-4 rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+            Evidence coverage is a workflow metric, not a credibility score. Evidence does not automatically determine the verified label.
+          </p>
+          <Link
+            href={`/history/${analysis.id}/evidence`}
+            className="mt-5 inline-flex items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
+          >
+            Open evidence workspace
+          </Link>
+        </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
           <div className="flex items-center gap-2">
@@ -147,57 +201,6 @@ export default async function HistoryDetailPage({ params }: HistoryDetailPagePro
               showNotes
             />
           </div>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck aria-hidden="true" className="h-4 w-4 text-signal" />
-            <h2 className="text-lg font-semibold text-ink">Evidence & Claims</h2>
-          </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-4">
-            <MetricCard label="Claims" value={String(evidenceSummary.total_claims)} />
-            <MetricCard label="Evidence references" value={String(evidenceSummary.total_evidence_references)} />
-            <MetricCard label="Supports" value={String(evidenceSummary.supporting_evidence_count)} />
-            <MetricCard label="Contradicts" value={String(evidenceSummary.contradicting_evidence_count)} />
-          </div>
-          <p className="mt-4 rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
-            Evidence coverage is a workflow metric, not a credibility score. Evidence does not automatically determine the verified label.
-          </p>
-          <Link
-            href={`/history/${analysis.id}/evidence`}
-            className="mt-5 inline-flex items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
-          >
-            Open evidence workspace
-          </Link>
-        </section>
-
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <h2 className="text-lg font-semibold text-ink">Persisted explanation</h2>
-          {analysis.explanation ? (
-            <div className="mt-5 grid gap-5">
-              <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-3">
-                <p>Method: {formatExplanationMethod(analysis.explanation.explanation_method)}</p>
-                <p>Explained class: {analysis.explanation.explained_class}</p>
-                <p>Generated: {new Date(analysis.explanation.generated_at).toLocaleString()}</p>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <InfluenceList title="Influences toward likely misinformation" items={analysis.explanation.influences_toward_fake} tone="fake" />
-                <InfluenceList title="Influences toward likely credible" items={analysis.explanation.influences_toward_real} tone="real" />
-              </div>
-              <div className="rounded-md bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
-                {analysis.explanation.message ? <p>{analysis.explanation.message}</p> : null}
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {analysis.explanation.limitations.map((limitation) => (
-                    <li key={limitation}>{limitation}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm leading-6 text-slate-600">
-              No explanation was saved with this analysis. Opening history never reruns explanation work.
-            </p>
-          )}
         </section>
       </div>
     </>
@@ -258,7 +261,7 @@ function InfluenceList({
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm leading-6 text-slate-500">No saved local evidence in this direction.</p>
+        <p className="mt-4 text-sm leading-6 text-slate-500">No saved model influence in this direction.</p>
       )}
     </div>
   );

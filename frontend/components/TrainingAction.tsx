@@ -49,6 +49,7 @@ export function TrainingAction() {
         </div>
         <div className="grid gap-3 sm:grid-cols-[180px_190px_auto]">
           <select
+            aria-label="Model type"
             value={modelType}
             onChange={(event) => setModelType(event.target.value)}
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"
@@ -58,6 +59,7 @@ export function TrainingAction() {
             <option value="distilbert">DistilBERT Transformer</option>
           </select>
           <select
+            aria-label="Text composition mode"
             value={textMode}
             onChange={(event) => setTextMode(event.target.value)}
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"

@@ -741,6 +741,16 @@ export function formatModelFamily(modelFamily: ModelFamily) {
   return modelFamily === "classical" ? "Classical" : "Transformer";
 }
 
+export function formatTrainingStatus(status: TrainingRunStatus | string) {
+  const labels: Record<string, string> = {
+    pending: "Pending",
+    training: "Running",
+    completed: "Completed",
+    failed: "Failed",
+  };
+  return labels[status] ?? status;
+}
+
 export function formatMetric(value: number | null | undefined) {
   if (value === null || value === undefined) {
     return "N/A";

@@ -6,8 +6,8 @@ import { Navbar } from "@/components/Navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI News Credibility Platform",
-  description: "Foundation shell for model-based news credibility analysis.",
+  title: "AI News Credibility & Misinformation Detection Platform",
+  description: "ML-based news credibility analysis, explainability, monitoring, and human review.",
 };
 
 export default function RootLayout({

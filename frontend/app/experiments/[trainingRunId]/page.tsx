@@ -15,6 +15,7 @@ import {
   formatMetric,
   formatModelFamily,
   formatModelType,
+  formatTrainingStatus,
 } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -84,7 +85,7 @@ export default async function ExperimentDetailPage({ params }: ExperimentDetailP
               {formatLifecycleStatus(experiment.lifecycle_status)}
             </span>
             <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-              {experiment.execution_status}
+              {formatTrainingStatus(experiment.execution_status)}
             </span>
           </div>
           <dl className="mt-6 grid gap-4 text-sm md:grid-cols-3">

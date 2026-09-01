@@ -37,6 +37,14 @@ export function LifecycleActions({
         return;
       }
     }
+    if (action === "archive") {
+      const confirmed = window.confirm(
+        `Archive "${modelName}"?\n\nArchived models remain in history and experiments but cannot be the active champion.`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
     setIsWorking(true);
     try {
       const response = await fetch(`${apiBaseUrl}/api/v1/models/${trainingRunId}/${action}`, {

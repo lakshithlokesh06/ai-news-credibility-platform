@@ -46,6 +46,7 @@ logs/
 # Large or generated ML/data artifacts
 data/raw/*
 data/processed/*
+!data/raw/demo_synthetic_news.csv
 models/artifacts/*
 models/checkpoints/*
 models/trained/*

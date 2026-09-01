@@ -14,8 +14,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "AI News Credibility API"
-    app_version: str = "0.1.0"
+    app_name: str = "AI News Credibility & Misinformation Detection Platform API"
+    app_version: str = "1.0.0"
     app_env: Literal["development", "test", "production"] = "development"
     debug: bool = False
     api_v1_prefix: str = "/api/v1"

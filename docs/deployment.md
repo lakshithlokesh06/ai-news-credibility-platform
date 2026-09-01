@@ -13,7 +13,8 @@ This guide describes a provider-neutral deployment shape for the current stack: 
 
 Important variables:
 
-- `APP_ENV`: `development`, `test`, or `production`
+- `APP_NAME`, `APP_VERSION`, `APP_ENV`
+- `API_V1_PREFIX`: default `/api/v1`
 - `DEBUG`: keep `false` in production
 - `DOCS_ENABLED`: use `false` in production unless intentionally exposing OpenAPI docs
 - `DATABASE_URL`: PostgreSQL SQLAlchemy URL

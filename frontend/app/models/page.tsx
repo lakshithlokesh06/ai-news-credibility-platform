@@ -14,6 +14,7 @@ import {
   formatModelFamily,
   formatMetric,
   formatModelType,
+  formatTrainingStatus,
 } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export default async function ModelsPage() {
       <PageHeader
         eyebrow="Model comparison"
         title="Models"
-        description="A backend-driven registry for classical and transformer training runs, artifact availability, explainability support, and validation/test metrics."
+        description="A backend-driven registry for classical and transformer training runs, lifecycle state, artifact availability, explainability support, and held-out test metrics."
       />
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-6">
@@ -72,11 +73,8 @@ export default async function ModelsPage() {
                       <th className="px-3 py-3 font-semibold">Status</th>
                       <th className="px-3 py-3 font-semibold">Lifecycle</th>
                       <th className="px-3 py-3 font-semibold">Explainability</th>
-                      <th className="px-3 py-3 font-semibold">Dataset size</th>
-                      <th className="px-3 py-3 font-semibold">Text mode</th>
-                      <th className="px-3 py-3 font-semibold">Validation F1</th>
                       <th className="px-3 py-3 font-semibold">Test F1</th>
-                      <th className="px-3 py-3 font-semibold">Accuracy</th>
+                      <th className="px-3 py-3 font-semibold">Training date</th>
                       <th className="px-3 py-3 font-semibold">ROC-AUC</th>
                       <th className="px-3 py-3 font-semibold">Reviewed</th>
                       <th className="px-3 py-3 font-semibold">Monitoring</th>
@@ -97,19 +95,18 @@ export default async function ModelsPage() {
                           </p>
                         </td>
                         <td className="px-3 py-4 text-slate-700">{formatModelFamily(model.model_family)}</td>
-                        <td className="px-3 py-4 text-slate-700">{model.status}</td>
+                        <td className="px-3 py-4 text-slate-700">{formatTrainingStatus(model.status)}</td>
                         <td className="px-3 py-4 text-slate-700">{formatLifecycleStatus(model.lifecycle_status)}</td>
                         <td className="px-3 py-4 text-slate-700">
                           <p>{model.explainability_supported ? "Supported" : "Not supported"}</p>
                           <p className="text-xs text-slate-500">{formatExplanationMethod(model.explanation_method)}</p>
                         </td>
-                        <td className="px-3 py-4 text-slate-700">{model.dataset_article_count}</td>
                         <td className="px-3 py-4 text-slate-700">
-                          {String(model.text_composition_config.mode ?? "N/A")}
+                          {formatMetric(model.test_metrics?.f1)}
                         </td>
-                        <td className="px-3 py-4 text-slate-700">{formatMetric(model.validation_metrics?.f1)}</td>
-                        <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.f1)}</td>
-                        <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.accuracy)}</td>
+                        <td className="px-3 py-4 text-slate-700">
+                          {model.completed_at ? new Date(model.completed_at).toLocaleDateString() : "N/A"}
+                        </td>
                         <td className="px-3 py-4 text-slate-700">{formatMetric(model.test_metrics?.roc_auc)}</td>
                         <td className="px-3 py-4 text-slate-700">
                           {model.status === "completed" ? (

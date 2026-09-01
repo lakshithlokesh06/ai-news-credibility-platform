@@ -21,6 +21,9 @@ type AnalyzeClientProps = {
   championId: string | null;
 };
 
+const TITLE_LIMIT = 1000;
+const CONTENT_LIMIT = 20000;
+
 export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
   const [selectedModel, setSelectedModel] = useState(championId ?? models[0]?.id ?? "");
   const [title, setTitle] = useState("");
@@ -143,19 +146,23 @@ export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              maxLength={TITLE_LIMIT}
               placeholder="Enter a headline"
               className="h-11 rounded-md border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-signal"
             />
+            <span className="text-xs text-slate-500">{title.length}/{TITLE_LIMIT} characters</span>
           </label>
           <label className="grid gap-2">
             <span className="text-sm font-medium text-slate-700">Article text</span>
             <textarea
               value={content}
               onChange={(event) => setContent(event.target.value)}
+              maxLength={CONTENT_LIMIT}
               rows={10}
               placeholder="Paste article text"
               className="resize-none rounded-md border border-slate-300 px-3 py-3 text-sm text-slate-700 outline-none focus:border-signal"
             />
+            <span className="text-xs text-slate-500">{content.length}/{CONTENT_LIMIT} characters</span>
           </label>
           <button
             type="button"
@@ -193,10 +200,13 @@ export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
         ) : null}
         {prediction ? (
           <div className="mt-5 grid gap-3 text-sm text-slate-700">
-            <p className="text-xl font-semibold text-ink">{predictionText}</p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Model Prediction</p>
+              <p className="mt-1 text-xl font-semibold text-ink">{predictionText.replace("Model prediction: ", "")}</p>
+            </div>
             <p>REAL probability: {formatMetric(prediction.real_probability)}</p>
             <p>FAKE probability: {formatMetric(prediction.fake_probability)}</p>
-            <p>Confidence: {formatMetric(prediction.confidence)}</p>
+            <p>Model Confidence: {formatMetric(prediction.confidence)}</p>
             <p>Model family: {formatModelFamily(prediction.model_family)}</p>
             <p>Model name: {prediction.model_name ?? formatModelType(prediction.model_type)}</p>
             <p>Probability method: {prediction.probability_method ?? "Not available"}</p>
@@ -241,12 +251,12 @@ export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <InfluenceList
-                title="Influences toward likely misinformation"
+                title="Influenced toward FAKE"
                 items={explanation.influences_toward_fake}
                 tone="fake"
               />
               <InfluenceList
-                title="Influences toward likely credible"
+                title="Influenced toward REAL"
                 items={explanation.influences_toward_real}
                 tone="real"
               />
@@ -263,7 +273,7 @@ export function AnalyzeClient({ models, championId }: AnalyzeClientProps) {
           </div>
         ) : !explanationError ? (
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            After a prediction, request an explanation to see which learned text features or tokens influenced the model.
+            After a prediction, request an explanation to see which learned text features or tokens influenced the model. These features are not factual evidence.
           </p>
         ) : null}
       </section>
@@ -307,7 +317,7 @@ function InfluenceList({
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm leading-6 text-slate-500">No strong local evidence in this direction within the configured limit.</p>
+        <p className="mt-4 text-sm leading-6 text-slate-500">No strong local model influence in this direction within the configured limit.</p>
       )}
     </div>
   );

@@ -1,8 +1,8 @@
 # Data Directory
 
-This directory is reserved for local datasets and processed data used by future NLP and ML workflows.
+This directory is reserved for local datasets and processed data used by NLP and ML workflows.
 
-Large datasets and generated processed files are intentionally excluded from git. Keep only lightweight documentation and placeholder files in version control.
+Large datasets and generated processed files are intentionally excluded from git. Keep only lightweight documentation, placeholders, and the small synthetic demo CSV in version control.
 
 ## Expected Dataset Location
 
@@ -71,7 +71,7 @@ curl -X POST http://localhost:8000/api/v1/dataset-imports \
   }'
 ```
 
-Small synthetic CSV fixtures used by automated tests live only in the test suite and are not real datasets.
+The repository includes `data/raw/demo_synthetic_news.csv`, a small synthetic dataset for demonstrating ingestion and training workflows. It is not a benchmark and must not be used to evaluate real-world misinformation detection accuracy.
 
 ## Saved Analysis Data
 

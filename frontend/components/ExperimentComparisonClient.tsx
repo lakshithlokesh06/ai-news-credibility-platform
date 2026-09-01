@@ -93,6 +93,7 @@ export function ExperimentComparisonClient({ experiments }: ExperimentComparison
         </div>
         <div className="grid gap-3 sm:grid-cols-[150px_150px_auto]">
           <select
+            aria-label="Metric source"
             value={metricSource}
             onChange={(event) => setMetricSource(event.target.value as (typeof sourceOptions)[number])}
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"
@@ -102,6 +103,7 @@ export function ExperimentComparisonClient({ experiments }: ExperimentComparison
             ))}
           </select>
           <select
+            aria-label="Primary comparison metric"
             value={primaryMetric}
             onChange={(event) => setPrimaryMetric(event.target.value as (typeof metricOptions)[number])}
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"

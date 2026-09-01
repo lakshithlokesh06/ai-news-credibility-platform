@@ -13,6 +13,7 @@ import {
   formatMetric,
   formatModelFamily,
   formatModelType,
+  formatTrainingStatus,
 } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -113,7 +114,7 @@ export default async function ExperimentsPage() {
                           </p>
                         </td>
                         <td className="px-3 py-4 text-slate-700">{formatModelFamily(experiment.model_family)}</td>
-                        <td className="px-3 py-4 text-slate-700">{experiment.execution_status}</td>
+                        <td className="px-3 py-4 text-slate-700">{formatTrainingStatus(experiment.execution_status)}</td>
                         <td className="px-3 py-4 text-slate-700">{formatLifecycleStatus(experiment.lifecycle_status)}</td>
                         <td className="px-3 py-4 text-slate-700">{experiment.dataset_identifiers.join(", ") || "All imported"}</td>
                         <td className="px-3 py-4 text-slate-700">{experiment.text_composition_mode ?? "N/A"}</td>

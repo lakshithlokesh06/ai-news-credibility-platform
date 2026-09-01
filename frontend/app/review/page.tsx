@@ -173,7 +173,7 @@ function ReviewQueue({ queue }: { queue: PaginatedResponse<ReviewQueueItem> & { 
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className={item.predicted_label === "FAKE" ? "rounded-md bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-800" : "rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800"}>
-                  Prediction: {item.predicted_label}
+                  Prediction: {item.predicted_label === "FAKE" ? "Likely misinformation" : "Likely credible"} ({item.predicted_label})
                 </span>
                 <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
                   {formatReviewStatus(item.review)}
@@ -189,7 +189,7 @@ function ReviewQueue({ queue }: { queue: PaginatedResponse<ReviewQueueItem> & { 
               {item.article_preview ? <p className="mt-2 text-sm leading-6 text-slate-600">{item.article_preview}</p> : null}
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
                 <span>{formatModelFamily(item.model_family)} / {item.model_name ?? formatModelType(item.model_type)}</span>
-                <span>Confidence {formatMetric(item.confidence)}</span>
+                <span>Model Confidence {formatMetric(item.confidence)}</span>
                 <span>{new Date(item.created_at).toLocaleString()}</span>
               </div>
               <Link href={`/history/${item.id}/evidence`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-ink">

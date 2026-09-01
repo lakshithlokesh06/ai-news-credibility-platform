@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-import { navigationItems } from "@/lib/navigation";
+import { isActiveNavigationPath, navigationGroups, navigationItems } from "@/lib/navigation";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -22,13 +22,13 @@ export function Navbar() {
             <Newspaper aria-hidden="true" className="h-5 w-5" />
           </span>
           <span className="min-w-0 text-sm font-semibold leading-tight text-ink sm:text-base">
-            AI News Credibility
+            News Credibility AI
           </span>
         </Link>
 
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-1 xl:flex">
           {navigationItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isActiveNavigationPath(pathname, item.href);
             return (
               <Link
                 key={item.href}
@@ -48,7 +48,8 @@ export function Navbar() {
         <button
           type="button"
           aria-label={isOpen ? "Close menu" : "Open menu"}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-700 md:hidden"
+          aria-expanded={isOpen}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-700 xl:hidden"
           onClick={() => setIsOpen((current) => !current)}
         >
           {isOpen ? <X aria-hidden="true" className="h-5 w-5" /> : <Menu aria-hidden="true" className="h-5 w-5" />}
@@ -56,27 +57,31 @@ export function Navbar() {
       </nav>
 
       {isOpen ? (
-        <div className="border-t border-slate-200 bg-white md:hidden">
-          <div className="mx-auto grid w-full max-w-7xl gap-1 px-4 py-3 sm:px-6">
-            {navigationItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`rounded-md px-3 py-3 text-sm font-medium ${
-                    isActive ? "bg-slate-100 text-ink" : "text-slate-600"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+        <div className="border-t border-slate-200 bg-white xl:hidden">
+          <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 sm:px-6">
+            {navigationGroups.map((group) => (
+              <div key={group.label} className="grid gap-1">
+                <p className="px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{group.label}</p>
+                {group.items.map((item) => {
+                  const isActive = isActiveNavigationPath(pathname, item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className={`rounded-md px-3 py-3 text-sm font-medium ${
+                        isActive ? "bg-slate-100 text-ink" : "text-slate-600"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
     </header>
   );
 }
-

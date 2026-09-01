@@ -13,9 +13,11 @@ type RefreshMonitoringProfileButtonProps = {
 export function RefreshMonitoringProfileButton({ trainingRunId }: RefreshMonitoringProfileButtonProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [message, setMessage] = useState<string | null>(null);
 
   async function refreshProfile() {
     setStatus("saving");
+    setMessage(null);
     try {
       const response = await fetch(
         `${apiBaseUrl}/api/v1/monitoring/models/${trainingRunId}/reference-profile`,
@@ -23,11 +25,14 @@ export function RefreshMonitoringProfileButton({ trainingRunId }: RefreshMonitor
       );
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(apiErrorMessage(payload, "Profile refresh failed."));
+        setMessage(apiErrorMessage(payload, "Profile refresh failed."));
+        setStatus("failed");
+        return;
       }
       setStatus("saved");
       router.refresh();
     } catch {
+      setMessage("Profile refresh failed. Check backend availability and model artifacts.");
       setStatus("failed");
     }
   }
@@ -45,7 +50,7 @@ export function RefreshMonitoringProfileButton({ trainingRunId }: RefreshMonitor
       </button>
       {status === "saved" ? <p className="text-xs text-emerald-700">Reference profile refreshed.</p> : null}
       {status === "failed" ? (
-        <p className="text-xs text-rose-700">Profile refresh failed. Check backend availability and model artifacts.</p>
+        <p className="text-xs text-rose-700">{message}</p>
       ) : null}
     </div>
   );

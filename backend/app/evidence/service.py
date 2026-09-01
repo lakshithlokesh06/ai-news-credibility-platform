@@ -179,6 +179,15 @@ class EvidenceService:
         claims = self.repository.claims_for_analysis_summary(analysis_id)
         return self._summary_from_claims(analysis_id, claims)
 
+    def analysis_summaries(self, analysis_ids: list[UUID]) -> dict[UUID, AnalysisEvidenceSummary]:
+        claims_by_analysis: dict[UUID, list[AnalysisClaim]] = {analysis_id: [] for analysis_id in analysis_ids}
+        for claim in self.repository.claims_for_analysis_summaries(analysis_ids):
+            claims_by_analysis.setdefault(claim.analysis_id, []).append(claim)
+        return {
+            analysis_id: self._summary_from_claims(analysis_id, claims)
+            for analysis_id, claims in claims_by_analysis.items()
+        }
+
     def statistics(
         self,
         *,

@@ -30,9 +30,9 @@ export default async function MonitoringPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Model reliability"
+        eyebrow="Behavior monitoring"
         title="Monitoring"
-        description="Track per-model usage, confidence, prediction-distribution shift, and input drift from saved analysis history."
+        description="Track whether model/input behavior has changed through usage, confidence, prediction-distribution shift, and input drift. Monitoring does not directly measure accuracy without reviewed labels."
       />
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {!overview ? (

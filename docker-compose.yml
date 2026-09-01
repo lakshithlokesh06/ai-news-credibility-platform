@@ -1,5 +1,7 @@
 x-backend-env: &backend-env
+  APP_NAME: "AI News Credibility & Misinformation Detection Platform API"
   APP_ENV: development
+  APP_VERSION: "1.0.0"
   DEBUG: "false"
   DOCS_ENABLED: "true"
   DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/ai_news_credibility

@@ -91,6 +91,17 @@ class EvidenceRepository:
             ).scalars().all()
         )
 
+    def claims_for_analysis_summaries(self, analysis_ids: list[UUID]) -> list[AnalysisClaim]:
+        if not analysis_ids:
+            return []
+        return list(
+            self.db.execute(
+                select(AnalysisClaim)
+                .options(selectinload(AnalysisClaim.evidence_items))
+                .where(AnalysisClaim.analysis_id.in_(analysis_ids))
+            ).scalars().all()
+        )
+
     def statistics_rows(
         self,
         *,

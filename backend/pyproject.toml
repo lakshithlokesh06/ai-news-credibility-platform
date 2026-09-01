@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-news-credibility-backend"
-version = "0.1.0"
-description = "FastAPI backend foundation for an AI news credibility platform."
+version = "1.0.0"
+description = "FastAPI backend for the AI News Credibility & Misinformation Detection Platform."
 requires-python = ">=3.11"
 dependencies = [
   "alembic>=1.13.0",

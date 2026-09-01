@@ -146,7 +146,7 @@ The FastAPI backend is organized by responsibility:
 
 ## Database
 
-PostgreSQL is the planned persistence layer. The foundation includes:
+PostgreSQL is the application persistence layer. The foundation includes:
 
 - Environment-driven database URL configuration
 - SQLAlchemy engine and session management

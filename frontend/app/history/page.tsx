@@ -286,7 +286,7 @@ function HistoryList({ history }: { history: PaginatedResponse<AnalysisHistorySu
               {item.article_preview ? <p className="mt-2 text-sm leading-6 text-slate-600">{item.article_preview}</p> : null}
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
                 <span>{formatModelFamily(item.model_family)} / {item.model_name ?? formatModelType(item.model_type)}</span>
-                <span>Confidence {formatMetric(item.confidence)}</span>
+                <span>Model Confidence {formatMetric(item.confidence)}</span>
                 <span>{new Date(item.created_at).toLocaleString()}</span>
                 {item.explanation_method ? <span>{formatExplanationMethod(item.explanation_method)}</span> : null}
               </div>

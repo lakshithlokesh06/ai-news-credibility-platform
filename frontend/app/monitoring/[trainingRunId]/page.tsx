@@ -69,7 +69,7 @@ export default async function MonitoringDetailPage({ params }: MonitoringDetailP
       <PageHeader
         eyebrow="Model monitoring"
         title={monitoring.model_display_name}
-        description="Per-training-run reliability diagnostics from saved prediction history and a stored training-reference profile."
+        description="Per-training-run behavior diagnostics from saved prediction history and a stored training-reference profile. Reviewed labels are required to measure production accuracy."
       />
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_340px] lg:px-8">
         <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
